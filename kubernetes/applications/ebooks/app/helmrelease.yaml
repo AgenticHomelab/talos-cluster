@@ -1,0 +1,155 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: calibre-web-automated
+  namespace: ebooks
+spec:
+  interval: 30m
+  timeout: 10m
+
+  chartRef:
+    kind: OCIRepository
+    name: bjw-s-app-template
+    namespace: flux-system
+
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+
+        pod:
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+
+        containers:
+          main:
+            image:
+              repository: crocodilestick/calibre-web-automated
+              tag: v4.0.8
+              pullPolicy: IfNotPresent
+
+            ports:
+              - name: http
+                containerPort: 8083
+
+            env:
+              PUID: "1000"
+              PGID: "1000"
+              TZ: Europe/Helsinki
+              CWA_PORT_OVERRIDE: "8083"
+              NETWORK_SHARE_MODE: "true"
+
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: http
+                  initialDelaySeconds: 90
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: http
+                  initialDelaySeconds: 30
+                  periodSeconds: 15
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                cpu: 2000m
+                memory: 2Gi
+
+            securityContext:
+              allowPrivilegeEscalation: false
+
+    service:
+      main:
+        controller: main
+        type: ClusterIP
+        ports:
+          http:
+            port: 8083
+
+    ingress:
+      main:
+        className: traefik
+        annotations:
+          network-exposure: internal
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+          external-dns.kubernetes.io/hostname: books.${BASE_DOMAIN}
+          external-dns.kubernetes.io/target: traefik.${BASE_DOMAIN}
+          external-dns.kubernetes.io/cloudflare-proxied: "false"
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+        hosts:
+          - host: books.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: calibre-web-automated-tls
+            hosts:
+              - books.${BASE_DOMAIN}
+
+    persistence:
+      config:
+        forceRename: cwa-config
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 20Gi
+        retain: true
+        globalMounts:
+          - path: /config
+
+      library:
+        forceRename: cwa-library
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 50Gi
+        retain: true
+        globalMounts:
+          - path: /calibre-library
+
+      ingest:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: cwa-book-ingest-truenas
+        globalMounts:
+          - path: /cwa-book-ingest
+
+      tmp:
+        enabled: true
+        type: emptyDir
+        globalMounts:
+          - path: /tmp

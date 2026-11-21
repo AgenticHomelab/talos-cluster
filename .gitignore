@@ -1,0 +1,20 @@
+talos/secrets.yaml
+talos/generated/
+talos/machines.local.env
+talos/cluster-template.rendered.yaml
+
+generated/
+
+# vscode-sops decrypted temp files
+**/.decrypted~*
+
+# Talos etcd snapshots
+etcd-snapshot-*.db
+
+# local Talos/Omni credentials
+/talosconfig*
+*.talosconfig
+
+# Local patch / diff files
+*.patch
+*.diff

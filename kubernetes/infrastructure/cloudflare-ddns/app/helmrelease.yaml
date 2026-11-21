@@ -1,0 +1,74 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudflare-ddns
+  namespace: cloudflare-ddns
+spec:
+  interval: 30m
+  timeout: 10m
+
+  chartRef:
+    kind: OCIRepository
+    name: bjw-s-app-template
+    namespace: flux-system
+
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+
+        containers:
+          main:
+            image:
+              repository: favonia/cloudflare-ddns
+              tag: "1.18.0"
+              pullPolicy: IfNotPresent
+
+            env:
+              CLOUDFLARE_API_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: cloudflare-ddns-secret
+                    key: api-token
+              IP4_DOMAINS: home.${BASE_DOMAIN}
+              IP6_PROVIDER: none
+              PROXIED: "false"
+              TTL: "120"
+              UPDATE_CRON: "@every 5m"
+              UPDATE_ON_START: "true"
+              DELETE_ON_STOP: "false"
+              RECORD_COMMENT: Managed by cloudflare-ddns in talos-homelab
+              EMOJI: "false"
+
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL

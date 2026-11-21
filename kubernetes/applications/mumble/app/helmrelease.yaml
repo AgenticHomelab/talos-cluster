@@ -1,0 +1,152 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mumble
+  namespace: mumble
+spec:
+  interval: 30m
+  timeout: 10m
+
+  chartRef:
+    kind: OCIRepository
+    name: bjw-s-app-template
+    namespace: flux-system
+
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+
+        pod:
+          securityContext:
+            runAsUser: 10000
+            runAsGroup: 10000
+            fsGroup: 10000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+
+        containers:
+          main:
+            image:
+              repository: ghcr.io/mumble-voip/mumble-server
+              tag: v1.6.1001-0
+              pullPolicy: IfNotPresent
+
+            env:
+              MUMBLE_CONFIG_WELCOMETEXT: "Welcome to mumble.${BASE_DOMAIN}"
+              MUMBLE_CONFIG_REGISTERNAME: "k0ti Mumble"
+              MUMBLE_CONFIG_REGISTERHOSTNAME: "mumble.${BASE_DOMAIN}"
+              MUMBLE_CONFIG_USERS: "25"
+              MUMBLE_CONFIG_BANDWIDTH: "72000"
+              MUMBLE_CONFIG_SSL_CERT: /certs/tls.crt
+              MUMBLE_CONFIG_SSL_KEY: /certs/tls.key
+              MUMBLE_SUPERUSER_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: mumble-superuser-password
+                    key: password
+
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 64738
+                  initialDelaySeconds: 30
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 64738
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+
+    service:
+      main:
+        controller: main
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        annotations:
+          network-exposure: public
+          metallb.io/address-pool: homelab-pool
+          metallb.io/loadBalancerIPs: ${MUMBLE_LB_IP}
+          external-dns.kubernetes.io/hostname: mumble.${BASE_DOMAIN}
+          external-dns.kubernetes.io/target: home.${BASE_DOMAIN}
+          external-dns.kubernetes.io/cloudflare-proxied: "false"
+        ports:
+          mumble-tcp:
+            primary: true
+            port: 64738
+            protocol: TCP
+          mumble-udp:
+            port: 64738
+            protocol: UDP
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        retain: true
+        globalMounts:
+          - path: /data
+
+      certificate:
+        enabled: true
+        type: secret
+        name: mumble-crt
+        globalMounts:
+          - path: /certs
+            readOnly: true
+
+    rawResources:
+      certificate:
+        enabled: true
+        manifest:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          spec:
+            secretName: mumble-crt
+            dnsNames:
+              - mumble.${BASE_DOMAIN}
+            issuerRef:
+              group: cert-manager.io
+              kind: ClusterIssuer
+              name: letsencrypt-prod
+            usages:
+              - digital signature
+              - key encipherment

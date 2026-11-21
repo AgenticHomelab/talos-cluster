@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - postgres-objectstore.yaml
+  - postgres-cluster.yaml
+  - postgres-databases.yaml
+  - postgres-scheduled-backup.yaml
+  - synapse-config.yaml
+  - mas-config.yaml
+  - mas-compat-ingressroute.yaml
+  - discovery-config.yaml
+  - helmrelease.yaml

@@ -1,0 +1,165 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mautrix-whatsapp
+  namespace: matrix-whatsapp
+spec:
+  interval: 30m
+  timeout: 15m
+  chartRef:
+    kind: OCIRepository
+    name: bjw-s-app-template
+    namespace: flux-system
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 1
+      strategy: rollback
+      remediateLastFailure: true
+  rollback:
+    cleanupOnFail: true
+  values:
+    controllers:
+      bridge:
+        replicas: 1
+        revisionHistoryLimit: 3
+        strategy: Recreate
+        pod:
+          automountServiceAccountToken: false
+          securityContext:
+            fsGroup: 1337
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+        initContainers:
+          config:
+            image:
+              repository: dock.mau.dev/mautrix/whatsapp
+              tag: v26.11
+              pullPolicy: IfNotPresent
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                sed \
+                  -e "s|__DATABASE_PASSWORD__|$DATABASE_PASSWORD|g" \
+                  -e "s|__AS_TOKEN__|$AS_TOKEN|g" \
+                  -e "s|__HS_TOKEN__|$HS_TOKEN|g" \
+                  -e "s|__DOUBLE_PUPPET_TOKEN__|$DOUBLE_PUPPET_TOKEN|g" \
+                  -e "s|__PICKLE_KEY__|$PICKLE_KEY|g" \
+                  /config-template/config.yaml > /config/config.yaml
+            env:
+              DATABASE_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: mautrix-whatsapp-secrets
+                    key: database-password
+              AS_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: mautrix-whatsapp-secrets
+                    key: as-token
+              HS_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: mautrix-whatsapp-secrets
+                    key: hs-token
+              DOUBLE_PUPPET_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: mautrix-whatsapp-secrets
+                    key: double-puppet-token
+              PICKLE_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: mautrix-whatsapp-secrets
+                    key: pickle-key
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+        containers:
+          main:
+            image:
+              # renovate: datasource=docker depName=dock.mau.dev/mautrix/whatsapp
+              repository: dock.mau.dev/mautrix/whatsapp
+              tag: v26.11
+              pullPolicy: IfNotPresent
+            command:
+              - /usr/bin/mautrix-whatsapp
+            args:
+              - -c
+              - /config/config.yaml
+            ports:
+              - name: appservice
+                containerPort: 29318
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /_matrix/mau/live
+                    port: appservice
+                  periodSeconds: 5
+                  failureThreshold: 60
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /_matrix/mau/ready
+                    port: appservice
+                  periodSeconds: 10
+                  failureThreshold: 3
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /_matrix/mau/live
+                    port: appservice
+                  periodSeconds: 30
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+    service:
+      main:
+        controller: bridge
+        type: ClusterIP
+        publishNotReadyAddresses: true
+        ports:
+          appservice:
+            port: 29318
+    persistence:
+      config-template:
+        enabled: true
+        type: configMap
+        name: mautrix-whatsapp-config
+        advancedMounts:
+          bridge:
+            config:
+              - path: /config-template
+                readOnly: true
+      config:
+        enabled: true
+        type: emptyDir
+        advancedMounts:
+          bridge:
+            config:
+              - path: /config
+            main:
+              - path: /config

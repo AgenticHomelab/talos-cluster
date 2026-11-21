@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentik-hermes-blueprint
+  namespace: authentik
+data:
+  hermes.yaml: |
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+
+    metadata:
+      name: Hermes Dashboard retirement
+      labels:
+        blueprints.goauthentik.io/instantiate: "true"
+
+    # Transitional tombstone for the retired Kubernetes Hermes deployment.
+    # Remove this blueprint only after Authentik has reconciled both objects
+    # absent.
+    entries:
+      - model: authentik_core.application
+        state: absent
+        identifiers:
+          slug: hermes
+
+      - model: authentik_providers_oauth2.oauth2provider
+        state: absent
+        identifiers:
+          name: Hermes Dashboard

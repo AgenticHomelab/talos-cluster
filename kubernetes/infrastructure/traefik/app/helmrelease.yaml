@@ -1,0 +1,104 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  interval: 30m
+  chart:
+    spec:
+      # renovate: datasource=helm depName=traefik registryUrl=https://helm.traefik.io/traefik
+      chart: traefik
+      version: "42.4.1"
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+        namespace: flux-system
+  values:
+    deployment:
+      replicas: 2
+      minReadySeconds: 10
+
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: traefik
+            topologyKey: kubernetes.io/hostname
+
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: traefik
+
+    service:
+      annotations:
+        network-exposure: internal
+        metallb.io/address-pool: traefik-pool
+      spec:
+        type: LoadBalancer
+        loadBalancerIP: ${TRAEFIK_LAN_IP}
+      additionalServices:
+        public:
+          annotations:
+            network-exposure: public
+            metallb.io/address-pool: traefik-public-pool
+          spec:
+            type: LoadBalancer
+            loadBalancerIP: ${TRAEFIK_PUBLIC_IP}
+    ports:
+      web:
+        expose:
+          default: true
+          public: false
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+              permanent: true
+      websecure:
+        expose:
+          default: true
+          public: false
+        http:
+          tls:
+            enabled: true
+      ssh:
+        port: 2222
+        expose:
+          default: true
+          public: false
+        exposedPort: 2222
+        protocol: TCP
+      web-public:
+        port: 8001
+        expose:
+          default: false
+          public: true
+        exposedPort: 80
+        protocol: TCP
+        http:
+          redirections:
+            entryPoint:
+              to: websecure-pub
+              scheme: https
+              permanent: true
+      websecure-pub:
+        port: 8444
+        expose:
+          default: false
+          public: true
+        exposedPort: 443
+        protocol: TCP
+        http:
+          tls:
+            enabled: true

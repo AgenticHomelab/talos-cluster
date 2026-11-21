@@ -1,0 +1,19 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tailscale
+  namespace: flux-system
+spec:
+  # Operator is active; separately managed egress configuration is also active.
+  suspend: false
+  interval: 10m
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/tailscale/app
+  prune: true
+  wait: true
+  timeout: 10m
+  dependsOn:
+    - name: tailscale-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

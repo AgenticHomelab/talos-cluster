@@ -1,0 +1,116 @@
+name: Merge Renovate PRs overnight
+
+on:
+  repository_dispatch:
+    types: [renovate-nightly-merge]
+  schedule:
+    # Avoid GitHub's busy top-of-hour schedule slot; scheduling remains best-effort.
+    - cron: '7,22,37,52 0-3 * * *'
+      timezone: Europe/Helsinki
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+concurrency:
+  group: renovate-nightly-merge
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  merge:
+    if: >-
+      vars.RENOVATE_NIGHTLY_MERGE_ENABLED == 'true' &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'repository_dispatch' ||
+       (github.event_name == 'pull_request_target' &&
+        github.event.pull_request.user.login == 'renovate[bot]' &&
+        github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Merge eligible Renovate PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          in_window() {
+            case "$(TZ=Europe/Helsinki date +%H)" in
+              00|01|02|03) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          if ! in_window; then
+            echo 'Outside the 00:00-04:00 Europe/Helsinki merge window.'
+            exit 0
+          fi
+
+          failed=0
+          failed_numbers=''
+          while in_window; do
+            candidates="$(gh api --paginate "repos/$GH_REPO/pulls?state=open&base=main&per_page=100" |
+              jq -sr --arg repo "$GH_REPO" '
+                [.[][] | select(
+                  .user.login == "renovate[bot]" and
+                  .head.repo.full_name == $repo and
+                  (.head.ref | startswith("renovate/")) and
+                  .base.ref == "main" and
+                  (.draft | not) and
+                  any(.labels[]?; .name == "dependencies")
+                ) | [.number, .head.sha] | @tsv] | .[]
+              ')"
+
+            if [[ -z "$candidates" ]]; then
+              echo 'No eligible Renovate PRs.'
+              break
+            fi
+
+            merged=0
+            while IFS=$'\t' read -r number head_sha; do
+              in_window || exit "$failed"
+              if grep -Fqx "$number" <<< "$failed_numbers"; then
+                continue
+              fi
+
+              files="$(gh api --paginate "repos/$GH_REPO/pulls/$number/files?per_page=100" --jq '.[].filename')"
+              if [[ -z "$files" ]] || grep -Eq '^talos/' <<< "$files"; then
+                echo "Skipping #$number: Talos configuration or no changed files."
+                continue
+              fi
+              if grep -Eq '^kubernetes/infrastructure/longhorn/' <<< "$files"; then
+                case "$(TZ=Europe/Helsinki date +%H)" in
+                  00|01) ;;
+                  *) echo "Skipping #$number: Longhorn's window has ended."; continue ;;
+                esac
+              fi
+
+              body="$(gh api "repos/$GH_REPO/pulls/$number" --jq '.body // ""')"
+              if grep -Eq 'siderolabs/talos|kubernetes/kubernetes' <<< "$body"; then
+                echo "Skipping #$number: Talos/Kubernetes version update."
+                continue
+              fi
+
+              in_window || exit "$failed"
+              if result="$(gh api -X PUT "repos/$GH_REPO/pulls/$number/merge" \
+                -f sha="$head_sha" -f merge_method=squash --jq '.sha' 2>&1)"; then
+                echo "Merged Renovate PR #$number at $result."
+                merged=1
+                break
+              else
+                echo "::warning::Merge failed for PR #$number: $result"
+                failed=1
+                failed_numbers+="$number"$'\n'
+              fi
+            done <<< "$candidates"
+
+            if [[ "$merged" -eq 0 ]]; then
+              break
+            fi
+          done
+          exit "$failed"

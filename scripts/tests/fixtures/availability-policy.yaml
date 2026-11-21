@@ -1,0 +1,389 @@
+apiVersion: homelab.example.invalid/v1alpha1
+kind: AvailabilityPolicy
+services:
+  - name: ingress
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: deployment
+      namespace: traefik
+      name: traefik
+      minReplicas: 2
+      pdb: traefik
+    probe:
+      type: https
+      target: https://whoami.example.invalid/
+
+  - name: authentik-server
+    class: bounded-recovery
+    recoveryBudgetSeconds: 360
+    workload:
+      kind: deployment
+      namespace: authentik
+      name: authentik-server
+      minReplicas: 2
+      pdb: authentik-server
+    probe:
+      type: https
+      target: https://auth.example.invalid/-/health/ready/
+
+  - name: authentik-worker
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: authentik
+      name: authentik-worker
+      minReplicas: 2
+      pdb: authentik-worker
+    probe:
+      type: workload
+      target: authentik/authentik-worker
+
+  - name: whoami
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: deployment
+      namespace: whoami
+      name: whoami
+      minReplicas: 2
+      pdb: whoami
+    probe:
+      type: https
+      target: https://whoami.example.invalid/
+
+  - name: pod-network
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: kube-system
+      name: kube-flannel
+      minReplicas: 3
+    probe:
+      type: workload
+      target: kube-system/kube-flannel
+
+  - name: service-proxy
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: kube-system
+      name: kube-proxy
+      minReplicas: 3
+    probe:
+      type: workload
+      target: kube-system/kube-proxy
+
+  - name: metallb-speakers
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: metallb-system
+      name: metallb-speaker
+      minReplicas: 3
+    probe:
+      type: workload
+      target: metallb-system/metallb-speaker
+
+  - name: metallb-frr
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: metallb-system
+      name: metallb-frr-k8s
+      minReplicas: 3
+    probe:
+      type: workload
+      target: metallb-system/metallb-frr-k8s
+
+  - name: longhorn-manager
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: longhorn-system
+      name: longhorn-manager
+      minReplicas: 3
+    probe:
+      type: workload
+      target: longhorn-system/longhorn-manager
+
+  - name: longhorn-csi-nodes
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: longhorn-system
+      name: longhorn-csi-plugin
+      minReplicas: 3
+    probe:
+      type: workload
+      target: longhorn-system/longhorn-csi-plugin
+
+  - name: nfs-csi-nodes
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: daemonset
+      namespace: nfs-csi
+      name: csi-nfs-node
+      minReplicas: 3
+    probe:
+      type: workload
+      target: nfs-csi/csi-nfs-node
+
+  - name: cluster-dns
+    class: seamless
+    recoveryBudgetSeconds: 10
+    workload:
+      kind: deployment
+      namespace: kube-system
+      name: coredns
+      minReplicas: 2
+      pdb: coredns
+    probe:
+      type: dns
+      target: kubernetes.default.svc.cluster.local
+
+  - name: nfs-csi-controller
+    class: bounded-recovery
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: nfs-csi
+      name: csi-nfs-controller
+    probe:
+      type: workload
+      target: nfs-csi/csi-nfs-controller
+
+  - name: authentik-postgres
+    class: bounded-recovery
+    recoveryBudgetSeconds: 600
+    workload:
+      kind: clusters.postgresql.cnpg.io
+      namespace: authentik
+      name: authentik-postgres
+    probe:
+      type: cnpg
+      target: authentik/authentik-postgres
+
+  - name: matrix-synapse
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: matrix
+      name: matrix-synapse
+    probe:
+      type: https
+      target: https://matrix.example.invalid/_matrix/client/versions
+
+  - name: matrix-authentication-service
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: matrix
+      name: matrix-mas
+    probe:
+      type: https
+      target: https://matrix-auth.example.invalid/.well-known/openid-configuration
+
+  - name: matrix-postgres
+    class: bounded-recovery
+    recoveryBudgetSeconds: 600
+    workload:
+      kind: clusters.postgresql.cnpg.io
+      namespace: matrix
+      name: matrix-postgres
+    probe:
+      type: cnpg
+      target: matrix/matrix-postgres
+
+  - name: mautrix-signal
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: matrix-signal
+      name: mautrix-signal
+    probe:
+      type: workload
+      target: matrix-signal/mautrix-signal
+
+  - name: mautrix-whatsapp
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: matrix-whatsapp
+      name: mautrix-whatsapp
+    probe:
+      type: workload
+      target: matrix-whatsapp/mautrix-whatsapp
+
+  - name: aiostreams
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: aiostreams
+      name: aiostreams
+    probe:
+      type: https
+      target: https://aiostreams.example.invalid/
+
+  - name: ebooks
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: ebooks
+      name: calibre-web-automated
+    probe:
+      type: https
+      target: https://books.example.invalid/
+
+  - name: vaultwarden
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: vaultwarden
+      name: vaultwarden
+    probe:
+      type: https
+      target: https://vw.example.invalid/alive
+
+  - name: borgwarehouse
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: borgwarehouse
+      name: borgwarehouse
+    probe:
+      type: https
+      target: https://borg.example.invalid/
+
+  - name: mumble
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: mumble
+      name: mumble
+    probe:
+      type: tcp
+      target: mumble.example.invalid:64738
+
+  - name: valheim
+    class: bounded-recovery
+    recoveryBudgetSeconds: 900
+    workload:
+      kind: deployment
+      namespace: valheim
+      name: valheim
+    probe:
+      type: udp
+      target: valheim.example.invalid:2456
+
+  - name: truenas
+    class: external-dependency
+    recoveryBudgetSeconds: 0
+    probe:
+      type: https
+      target: https://truenas.example.invalid/
+
+  - name: flux-operator
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: flux-system
+      name: flux-operator
+    probe:
+      type: workload
+      target: flux-system/flux-operator
+
+  - name: flux-web
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: flux-system
+      name: flux-web
+    probe:
+      type: workload
+      target: flux-system/flux-web
+
+  - name: cert-manager
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: cert-manager
+      name: cert-manager
+    probe:
+      type: workload
+      target: cert-manager/cert-manager
+
+  - name: external-dns
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: external-dns
+      name: external-dns
+    probe:
+      type: workload
+      target: external-dns/external-dns
+
+  - name: cloudflare-ddns
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: cloudflare-ddns
+      name: cloudflare-ddns
+    probe:
+      type: workload
+      target: cloudflare-ddns/cloudflare-ddns
+
+  - name: metallb-controller
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: metallb-system
+      name: metallb-controller
+    probe:
+      type: workload
+      target: metallb-system/metallb-controller
+
+  - name: longhorn-driver-deployer
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: longhorn-system
+      name: longhorn-driver-deployer
+    probe:
+      type: workload
+      target: longhorn-system/longhorn-driver-deployer
+
+  - name: barman-cloud
+    class: management
+    recoveryBudgetSeconds: 300
+    workload:
+      kind: deployment
+      namespace: cnpg-system
+      name: barman-cloud
+    probe:
+      type: workload
+      target: cnpg-system/barman-cloud

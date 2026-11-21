@@ -1,0 +1,36 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: matrix-postgres-backups
+  namespace: matrix
+spec:
+  configuration:
+    destinationPath: s3://matrix-postgres-backups/
+    endpointURL: ${GARAGE_ENDPOINT_URL}
+    endpointCA:
+      name: matrix-postgres-s3-ca
+      key: ca.crt
+    s3Credentials:
+      accessKeyId:
+        name: matrix-postgres-s3
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: matrix-postgres-s3
+        key: ACCESS_SECRET_KEY
+      region:
+        name: matrix-postgres-s3
+        key: AWS_DEFAULT_REGION
+    data:
+      compression: gzip
+      jobs: 2
+    wal:
+      compression: gzip
+      maxParallel: 4
+  retentionPolicy: 30d
+  instanceSidecarConfiguration:
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 256Mi

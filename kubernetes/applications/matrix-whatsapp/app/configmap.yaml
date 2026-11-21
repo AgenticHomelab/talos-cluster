@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mautrix-whatsapp-config
+  namespace: matrix-whatsapp
+data:
+  config.yaml: |
+    network:
+      os_name: ${BASE_DOMAIN} Matrix bridge
+      browser_name: unknown
+      displayname_template: '{{or .BusinessName .PushName .RedactedPhone "Unknown user"}} (WA)'
+      url_previews: false
+      history_sync:
+        max_initial_conversations: 50
+        request_full_sync: false
+        full_sync_config:
+          days_limit: 0
+          size_mb_limit: 0
+          storage_quota_mb: 0
+
+    bridge:
+      command_prefix: '!wa'
+      personal_filtering_spaces: true
+      private_chat_portal_meta: true
+      async_events: false
+      kick_matrix_users: true
+      relay:
+        enabled: false
+        admin_only: true
+        prefer_default: true
+        allow_bridge: false
+        default_relays: []
+      permissions:
+        '*': commands
+        '@antti:${BASE_DOMAIN}': admin
+        '@hermes:${BASE_DOMAIN}': commands
+
+    database:
+      type: postgres
+      uri: postgres://mautrix_whatsapp:__DATABASE_PASSWORD__@matrix-postgres-rw.matrix.svc.cluster.local:5432/mautrix_whatsapp?sslmode=disable
+      max_open_conns: 5
+      max_idle_conns: 1
+
+    homeserver:
+      address: http://matrix-synapse.matrix.svc.cluster.local:8008
+      domain: ${BASE_DOMAIN}
+      software: standard
+      websocket: false
+
+    appservice:
+      address: http://mautrix-whatsapp.matrix-whatsapp.svc.cluster.local:29318
+      hostname: 0.0.0.0
+      port: 29318
+      id: whatsapp
+      bot:
+        username: whatsappbot
+        displayname: WhatsApp bridge bot
+      ephemeral_events: true
+      async_transactions: false
+      as_token: __AS_TOKEN__
+      hs_token: __HS_TOKEN__
+      username_template: whatsapp_{{.}}
+
+    matrix:
+      message_status_events: false
+      delivery_receipts: true
+      message_error_notices: true
+      sync_direct_chat_list: true
+      federate_rooms: true
+
+    analytics:
+      token: null
+
+    provisioning:
+      shared_secret: disable
+      allow_matrix_auth: false
+      debug_endpoints: false
+      enable_session_transfers: false
+
+    public_media:
+      enabled: false
+
+    direct_media:
+      enabled: false
+
+    backfill:
+      enabled: true
+      max_initial_messages: 50
+      max_catchup_messages: 50
+      threads:
+        max_initial_messages: 50
+      queue:
+        enabled: false
+        manual: false
+
+    double_puppet:
+      servers: {}
+      allow_discovery: false
+      secrets:
+        ${BASE_DOMAIN}: "as_token:__DOUBLE_PUPPET_TOKEN__"
+
+    encryption:
+      allow: true
+      default: true
+      require: true
+      appservice: true
+      msc4190: true
+      self_sign: true
+      allow_key_sharing: true
+      pickle_key: __PICKLE_KEY__

@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: network-policy-probe-script
+  namespace: network-policy-probe
+data:
+  probe.sh: |
+    #!/bin/sh
+    set -eu
+
+    host=${1:?missing target service DNS name}
+    port=${2:?missing target port}
+    timeout=${3:?missing timeout}
+
+    echo "DNS_QUERY=${host}"
+    set +e
+    dns_output=$(nslookup "$host" 2>&1)
+    dns_status=$?
+    set -e
+    printf '%s\n' "$dns_output"
+    if [ "$dns_status" -ne 0 ]; then
+      echo "DNS_RESOLUTION=failed"
+      exit 2
+    fi
+    echo "DNS_RESOLUTION=success"
+
+    target="http://${host}:${port}/"
+    echo "HTTP_TARGET=${target}"
+    set +e
+    response=$(wget -S -T "$timeout" -O - "$target" 2>&1)
+    connection_status=$?
+    set -e
+    printf '%s\n' "$response"
+
+    if printf '%s\n' "$response" | grep -Eiq 'HTTP/[0-9]'; then
+      echo "CONNECTION_RESULT=unexpected-http-response"
+      exit 1
+    fi
+
+    if [ "$connection_status" -eq 0 ]; then
+      echo "CONNECTION_RESULT=unexpected-success"
+      exit 1
+    fi
+
+    if printf '%s\n' "$response" | grep -Eiq 'connection refused'; then
+      echo "CONNECTION_RESULT=unexpected-connection-refused"
+      exit 1
+    fi
+
+    if printf '%s\n' "$response" | grep -Eiq 'timed out|timeout'; then
+      echo "CONNECTION_RESULT=expected-network-policy-drop"
+      echo "CONNECTION_EXIT=${connection_status}"
+      exit 0
+    fi
+
+    echo "CONNECTION_RESULT=ambiguous-transport-failure"
+    echo "CONNECTION_EXIT=${connection_status}"
+    exit 1

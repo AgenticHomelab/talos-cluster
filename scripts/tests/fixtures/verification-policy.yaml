@@ -1,0 +1,110 @@
+apiVersion: homelab.example.invalid/v1alpha1
+kind: VerificationPolicy
+metadata:
+  name: post-merge-health
+spec:
+  verification:
+    source:
+      namespace: flux-system
+      name: flux-system
+    timeoutSeconds: 600
+    pollSeconds: 5
+    applications:
+      - name: aiostreams
+        category: applications
+        pathPrefix: kubernetes/applications/aiostreams/
+        fluxKustomizations:
+          - aiostreams
+        helmReleases:
+          - aiostreams/aiostreams
+        services:
+          - aiostreams
+      - name: borgwarehouse
+        category: applications
+        pathPrefix: kubernetes/applications/borgwarehouse/
+        fluxKustomizations:
+          - borgwarehouse
+        helmReleases:
+          - borgwarehouse/borgwarehouse
+        services:
+          - borgwarehouse
+      - name: cloudflare-ddns
+        category: infrastructure
+        pathPrefix: kubernetes/infrastructure/cloudflare-ddns/
+        fluxKustomizations:
+          - cloudflare-ddns
+        helmReleases:
+          - cloudflare-ddns/cloudflare-ddns
+        services:
+          - cloudflare-ddns
+      - name: ebooks
+        category: applications
+        pathPrefix: kubernetes/applications/ebooks/
+        fluxKustomizations:
+          - ebooks
+        helmReleases:
+          - ebooks/calibre-web-automated
+        services:
+          - ebooks
+      - name: external-dns
+        category: infrastructure
+        pathPrefix: kubernetes/infrastructure/external-dns/
+        fluxKustomizations:
+          - external-dns
+        helmReleases:
+          - external-dns/external-dns
+        services:
+          - external-dns
+      - name: flux-web-ui
+        category: infrastructure
+        pathPrefix: kubernetes/infrastructure/flux-web-ui/
+        fluxKustomizations:
+          - flux-web-ui
+        helmReleases:
+          - flux-system/flux-web
+        services:
+          - flux-web
+      - name: matrix-signal
+        category: applications
+        pathPrefix: kubernetes/applications/matrix-signal/
+        fluxKustomizations:
+          - matrix-signal
+        helmReleases:
+          - matrix-signal/mautrix-signal
+        services:
+          - mautrix-signal
+      - name: matrix-whatsapp
+        category: applications
+        pathPrefix: kubernetes/applications/matrix-whatsapp/
+        fluxKustomizations:
+          - matrix-whatsapp
+        helmReleases:
+          - matrix-whatsapp/mautrix-whatsapp
+        services:
+          - mautrix-whatsapp
+      - name: mumble
+        category: applications
+        pathPrefix: kubernetes/applications/mumble/
+        fluxKustomizations:
+          - mumble
+        helmReleases:
+          - mumble/mumble
+        services:
+          - mumble
+      - name: vaultwarden
+        category: applications
+        pathPrefix: kubernetes/applications/vaultwarden/
+        fluxKustomizations:
+          - vaultwarden
+        helmReleases:
+          - vaultwarden/vaultwarden
+        services:
+          - vaultwarden
+      - name: whoami
+        category: applications
+        pathPrefix: kubernetes/applications/whoami/
+        fluxKustomizations:
+          - whoami
+        helmReleases: []
+        services:
+          - whoami

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-discovery
+  namespace: matrix
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_name _;
+      default_type application/json;
+      add_header Access-Control-Allow-Origin "*" always;
+      add_header X-Content-Type-Options "nosniff" always;
+
+      location = /.well-known/matrix/server {
+        return 200 '{"m.server":"matrix.${BASE_DOMAIN}:443"}';
+      }
+
+      location = /.well-known/matrix/client {
+        return 200 '{"m.homeserver":{"base_url":"https://matrix.${BASE_DOMAIN}"}}';
+      }
+
+      location / {
+        return 404;
+      }
+    }

@@ -1,0 +1,182 @@
+defaultPodOptions:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+controllers:
+  main:
+    containers:
+      main:
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+immich:
+  persistence:
+    library:
+      existingClaim: immich-media-truenas
+server:
+  enabled: true
+  controllers:
+    main:
+      replicas: 1
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: ghcr.io/immich-app/immich-server
+            tag: v3.4.2@sha256:fc880c1bf665b4aab1e74c15e56ab871225989cd546536e6b77e771869af06bd
+            pullPolicy: IfNotPresent
+          env:
+            DB_HOSTNAME: immich-postgres-rw.immich.svc.cluster.local
+            DB_PORT: "5432"
+            DB_DATABASE_NAME: immich
+            DB_USERNAME:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-postgres-user
+                  key: username
+            DB_PASSWORD:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-postgres-user
+                  key: password
+            DB_VECTOR_EXTENSION: vectorchord
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+          probes:
+            startup:
+              spec:
+                timeoutSeconds: 5
+                failureThreshold: 120
+            readiness:
+              spec:
+                timeoutSeconds: 5
+            liveness:
+              spec:
+                timeoutSeconds: 5
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        network-exposure: internal
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        external-dns.kubernetes.io/hostname: immich.${BASE_DOMAIN}
+        external-dns.kubernetes.io/target: traefik.${BASE_DOMAIN}
+        external-dns.kubernetes.io/cloudflare-proxied: "false"
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        traefik.ingress.kubernetes.io/router.tls: "true"
+      hosts:
+        - host: immich.${BASE_DOMAIN}
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: immich-tls
+          hosts:
+            - immich.${BASE_DOMAIN}
+machine-learning:
+  enabled: true
+  controllers:
+    main:
+      replicas: 1
+      strategy: Recreate
+      pod:
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+          fsGroup: 1000
+          fsGroupChangePolicy: OnRootMismatch
+      containers:
+        main:
+          image:
+            repository: ghcr.io/immich-app/immich-machine-learning
+            tag: v3.4.2@sha256:739405742a79bd7447227c553bb62ed5491aa36acf00bc667af7f9c93b6fae91
+            pullPolicy: IfNotPresent
+          env:
+            HOME: /cache
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+          probes:
+            startup:
+              spec:
+                timeoutSeconds: 5
+                failureThreshold: 120
+            readiness:
+              spec:
+                timeoutSeconds: 5
+            liveness:
+              spec:
+                timeoutSeconds: 5
+  persistence:
+    cache:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: longhorn
+      accessMode: ReadWriteOnce
+      size: 10Gi
+      retain: true
+valkey:
+  enabled: true
+  controllers:
+    main:
+      replicas: 1
+      strategy: Recreate
+      pod:
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+          fsGroup: 1000
+          fsGroupChangePolicy: OnRootMismatch
+      containers:
+        main:
+          image:
+            repository: docker.io/valkey/valkey
+            tag: 9.2.0-alpine@sha256:c8e2d17498838af5d91e12eb7c11220b3434a7b7131a333e3af52ad5e0b80882
+            pullPolicy: IfNotPresent
+          args:
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            - --maxmemory-policy
+            - noeviction
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+  persistence:
+    data:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: longhorn
+      accessMode: ReadWriteOnce
+      size: 1Gi
+      retain: true

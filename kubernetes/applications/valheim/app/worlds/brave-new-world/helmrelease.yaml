@@ -1,0 +1,149 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: valheim2
+  namespace: valheim
+spec:
+  interval: 30m
+  timeout: 10m
+
+  chartRef:
+    kind: OCIRepository
+    name: bjw-s-app-template
+    namespace: flux-system
+
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+        replicas: 1
+
+        pod:
+          terminationGracePeriodSeconds: 180
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+
+        containers:
+          main:
+            image:
+              repository: mbround18/valheim
+              tag: 3.8.12
+              pullPolicy: IfNotPresent
+
+            env:
+              PORT: "2459"
+              NAME: Brave New World
+              WORLD: "'Brave New World'"
+              TZ: Europe/Helsinki
+              PUBLIC: "1"
+
+              SCHEDULED_RESTART: "1"
+              SCHEDULED_RESTART_SCHEDULE: "0 3 * * *"
+
+              AUTO_UPDATE: "1"
+              AUTO_UPDATE_SCHEDULE: "0 1 * * *"
+              UPDATE_ON_STARTUP: "1"
+              STAGED_UPDATES: "1"
+
+              AUTO_BACKUP: "1"
+              AUTO_BACKUP_SCHEDULE: "*/15 * * * *"
+              AUTO_BACKUP_REMOVE_OLD: "1"
+              AUTO_BACKUP_DAYS_TO_LIVE: "3"
+              AUTO_BACKUP_ON_UPDATE: "1"
+              AUTO_BACKUP_ON_SHUTDOWN: "1"
+
+              TYPE: Vanilla
+
+              PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: valheim-secret
+                    key: password
+
+            probes:
+              startup:
+                enabled: false
+              readiness:
+                enabled: false
+              liveness:
+                enabled: false
+
+            resources:
+              requests:
+                cpu: 500m
+                memory: 2Gi
+              limits:
+                memory: 6Gi
+
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+
+    service:
+      main:
+        controller: main
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        annotations:
+          network-exposure: public
+          metallb.io/address-pool: homelab-pool
+          metallb.io/loadBalancerIPs: ${VALHEIM2_LB_IP}
+          external-dns.kubernetes.io/hostname: valheim2.${BASE_DOMAIN}
+          external-dns.kubernetes.io/target: home.${BASE_DOMAIN}
+          external-dns.kubernetes.io/cloudflare-proxied: "false"
+        ports:
+          game:
+            primary: true
+            port: 2459
+            protocol: UDP
+          query:
+            port: 2460
+            protocol: UDP
+          extra:
+            port: 2461
+            protocol: UDP
+
+    persistence:
+      saves:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        retain: true
+        globalMounts:
+          - path: /home/steam/.config/unity3d/IronGate/Valheim
+
+      server:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 30Gi
+        retain: true
+        globalMounts:
+          - path: /home/steam/valheim
+
+      backups:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: valheim2-backups-truenas
+        globalMounts:
+          - path: /home/steam/backups

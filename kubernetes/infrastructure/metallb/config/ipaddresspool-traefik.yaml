@@ -1,0 +1,9 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: traefik-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - ${TRAEFIK_LAN_IP}/32
+  autoAssign: false

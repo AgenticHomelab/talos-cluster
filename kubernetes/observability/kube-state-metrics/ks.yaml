@@ -1,0 +1,17 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kube-state-metrics
+  namespace: flux-system
+spec:
+  # Credential handoff and separately reviewed activation are still pending.
+  suspend: false
+  interval: 10m
+  retryInterval: 1m
+  path: ./kubernetes/observability/kube-state-metrics/app
+  prune: true
+  wait: true
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

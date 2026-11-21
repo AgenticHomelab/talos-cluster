@@ -1,0 +1,428 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alloy
+  namespace: alloy
+spec:
+  # Active following reviewed encrypted credential handoff and deployment.
+  suspend: false
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      # renovate: datasource=helm depName=alloy registryUrl=https://grafana.github.io/helm-charts
+      chart: alloy
+      version: "1.16.0"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: alloy
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+  values:
+    fullnameOverride: alloy
+    crds:
+      create: false
+    rbac:
+      create: true
+      # Cluster grants stay node-only; Pod/log grants are namespace-local Roles.
+      rules:
+        - apiGroups: [""]
+          resources: ["nodes"]
+          verbs: ["list", "watch"]
+      clusterRules:
+        - apiGroups: [""]
+          resources: ["nodes/metrics"]
+          verbs: ["get"]
+    serviceAccount:
+      create: true
+      name: alloy
+      automountServiceAccountToken: false
+    global:
+      podSecurityContext:
+        runAsNonRoot: true
+        runAsUser: 473
+        runAsGroup: 473
+        fsGroup: 473
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    configReloader:
+      # The chart's config checksum triggers a StatefulSet rollout; WAL persists.
+      enabled: false
+    controller:
+      type: statefulset
+      replicas: 1
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 60
+      enableStatefulSetAutoDeletePVC: false
+      volumeClaimTemplates:
+        - metadata:
+            name: wal
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: longhorn
+            resources:
+              requests:
+                storage: 2Gi
+      volumes:
+        extra:
+          - name: remote-write
+            secret:
+              secretName: talos-metrics-ingestion
+              optional: false
+              defaultMode: 0440
+              items:
+                - key: password
+                  path: password
+          - name: kubelet-api
+            projected:
+              defaultMode: 288 # 0440, decimal avoids YAML 1.1/1.2 ambiguity
+              sources:
+                # Omitted audience selects the API server's default audience,
+                # also used by kubelet's native TokenReview authentication.
+                - serviceAccountToken:
+                    path: token
+                    expirationSeconds: 3600
+                - configMap:
+                    name: kube-root-ca.crt
+                    items:
+                      - key: ca.crt
+                        path: ca.crt
+          - name: logs-ingestion
+            secret:
+              secretName: talos-logs-ingestion
+              optional: false
+              defaultMode: 288 # 0440
+              items:
+                - key: password
+                  path: password
+    service:
+      type: ClusterIP
+      annotations:
+        network-exposure: port-forward
+    serviceMonitor:
+      enabled: false
+    ingress:
+      enabled: false
+    alloy:
+      enableReporting: false
+      storagePath: /var/lib/alloy
+      # Pod-network only; ClusterIP, no ingress, host port or public listener.
+      listenAddr: 0.0.0.0
+      mounts:
+        varlog: false
+        dockercontainers: false
+        extra:
+          - name: wal
+            mountPath: /var/lib/alloy
+          - name: remote-write
+            mountPath: /etc/alloy/remote-write
+            readOnly: true
+          - name: kubelet-api
+            mountPath: /etc/alloy/kubelet-api
+            readOnly: true
+          - name: logs-ingestion
+            mountPath: /etc/alloy/logs-ingestion
+            readOnly: true
+      resources:
+        requests:
+          cpu: 150m
+          memory: 192Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      configMap:
+        content: |-
+          // Existing state/self targets stay static; node discovery uses a scoped projection.
+          logging {
+            level = "info"
+          }
+
+          prometheus.scrape "kube_state_metrics" {
+            targets = [{
+              "__address__" = "kube-state-metrics.kube-state-metrics.svc.cluster.local:8080",
+              "instance"    = "kube-state-metrics",
+            }]
+            job_name        = "talos/kube-state-metrics"
+            scrape_interval = "60s"
+            scrape_timeout  = "10s"
+            forward_to      = [prometheus.remote_write.oci.receiver]
+          }
+
+          prometheus.scrape "alloy" {
+            targets = [{
+              "__address__" = "127.0.0.1:12345",
+              "instance"    = "alloy",
+            }]
+            job_name        = "talos/alloy"
+            scrape_interval = "60s"
+            scrape_timeout  = "10s"
+            forward_to      = [prometheus.remote_write.oci.receiver]
+          }
+
+          discovery.kubernetes "nodes" {
+            role              = "node"
+            api_server        = "https://kubernetes.default.svc:443"
+            bearer_token_file = "/etc/alloy/kubelet-api/token"
+            follow_redirects  = false
+
+            tls_config {
+              ca_file = "/etc/alloy/kubelet-api/ca.crt"
+            }
+          }
+
+          discovery.relabel "kubelet_resource" {
+            targets = discovery.kubernetes.nodes.targets
+
+            // Use InternalIP rather than unresolved node hostnames. Skip nodes
+            // without one; do not fall back to an external address.
+            rule {
+              source_labels = ["__meta_kubernetes_node_address_InternalIP"]
+              regex         = ".+"
+              action        = "keep"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_address_InternalIP"]
+              target_label  = "__address__"
+              replacement   = "$1:10250"
+            }
+            // Bracket IPv6 InternalIPs; IPv4 targets retain normal host:port.
+            rule {
+              source_labels = ["__meta_kubernetes_node_address_InternalIP"]
+              regex         = "(.+:.*)"
+              target_label  = "__address__"
+              replacement   = "[$1]:10250"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              target_label  = "instance"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              target_label  = "node"
+            }
+          }
+
+          prometheus.scrape "kubelet_resource" {
+            targets                  = discovery.relabel.kubelet_resource.output
+            job_name                 = "talos/kubelet-resource"
+            scheme                   = "https"
+            metrics_path             = "/metrics/resource"
+            bearer_token_file        = "/etc/alloy/kubelet-api/token"
+            follow_redirects         = false
+            scrape_interval          = "60s"
+            scrape_timeout           = "10s"
+            body_size_limit          = "4MiB"
+            sample_limit             = 5000
+            label_limit              = 12
+            label_name_length_limit  = 128
+            label_value_length_limit = 256
+            forward_to               = [prometheus.relabel.kubelet_resource.receiver]
+
+            // Operator-approved temporary exception ONLY for private kubelets.
+            // OCI remote-write and Kubernetes discovery retain verified TLS.
+            tls_config {
+              insecure_skip_verify = true
+            }
+          }
+
+          prometheus.relabel "kubelet_resource" {
+            forward_to = [prometheus.remote_write.oci.receiver]
+
+            rule {
+              source_labels = ["__name__"]
+              regex         = "(node|pod|container)_cpu_usage_seconds_total|(node|pod|container)_memory_working_set_bytes|resource_scrape_error|up|scrape_(duration_seconds|samples_scraped|samples_post_metric_relabeling|series_added)"
+              action        = "keep"
+            }
+
+            rule {
+              regex  = "__name__|job|instance|node|namespace|pod|container"
+              action = "labelkeep"
+            }
+          }
+
+          prometheus.remote_write "oci" {
+            external_labels = {"cluster" = "talos-home"}
+
+            endpoint {
+              name             = "control-01"
+              url              = "https://control-01.tailscale.svc.cluster.local/api/v1/write"
+              follow_redirects = false
+              remote_timeout   = "25s"
+              send_exemplars   = false
+
+              basic_auth {
+                username      = "talos-home"
+                password_file = "/etc/alloy/remote-write/password"
+              }
+
+              tls_config {
+                server_name = "metrics.${BASE_DOMAIN}"
+              }
+
+              queue_config {
+                capacity             = 10000
+                min_shards           = 1
+                max_shards           = 2
+                max_samples_per_send = 1000
+                batch_send_deadline  = "5s"
+                min_backoff          = "1s"
+                max_backoff          = "30s"
+                retry_on_http_429    = true
+              }
+
+              write_relabel_config {
+                action = "labeldrop"
+                regex  = "uid"
+              }
+            }
+
+            wal {
+              truncate_frequency = "1h"
+              min_keepalive_time = "5m"
+              max_keepalive_time = "8h"
+            }
+          }
+
+          // Pod discovery is namespace-scoped at the API, not a cluster-wide filter.
+          discovery.kubernetes "logs" {
+            role              = "pod"
+            api_server        = "https://kubernetes.default.svc:443"
+            bearer_token_file = "/etc/alloy/kubelet-api/token"
+            follow_redirects  = false
+
+            namespaces {
+              names = ["metrics-server", "kube-state-metrics"]
+            }
+
+            tls_config {
+              ca_file = "/etc/alloy/kubelet-api/ca.crt"
+            }
+          }
+
+          discovery.relabel "logs" {
+            targets = discovery.kubernetes.logs.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_pod_phase"]
+              regex         = "Running"
+              action        = "keep"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_pod_container_init"]
+              regex         = "true"
+              action        = "drop"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_pod_name"]
+              target_label  = "pod"
+            }
+
+            rule {
+              source_labels = ["__meta_kubernetes_pod_container_name"]
+              target_label  = "container"
+            }
+
+            rule {
+              target_label = "job"
+              replacement  = "talos/pods"
+            }
+          }
+
+          loki.source.kubernetes "scoped" {
+            targets    = discovery.relabel.logs.output
+            forward_to = [loki.relabel.scoped.receiver]
+
+            client {
+              api_server        = "https://kubernetes.default.svc:443"
+              bearer_token_file = "/etc/alloy/kubelet-api/token"
+              follow_redirects  = false
+
+              tls_config {
+                ca_file = "/etc/alloy/kubelet-api/ca.crt"
+              }
+            }
+          }
+
+          // Strip all implicit source labels; no Kubernetes label/annotation promotion.
+          loki.relabel "scoped" {
+            forward_to = [loki.process.scoped.receiver]
+
+            rule {
+              action = "labelkeep"
+              regex  = "namespace|pod|container|job"
+            }
+          }
+
+          loki.process "scoped" {
+            forward_to = [loki.write.oci_logs.receiver]
+
+            // First discovery may read all retained container logs. Bound forwarded age.
+            stage.drop {
+              older_than          = "1h"
+              drop_counter_reason = "scoped_too_old"
+            }
+
+            stage.drop {
+              longer_than         = "16KiB"
+              drop_counter_reason = "scoped_too_long"
+            }
+
+            // Global budget across both namespaces. Excess lines are intentionally lost.
+            stage.limit {
+              rate  = 5
+              burst = 10
+              drop  = true
+            }
+          }
+
+          loki.write "oci_logs" {
+            external_labels = {"cluster" = "talos-home"}
+            max_streams     = 32
+
+            endpoint {
+              url                = "https://control-01.tailscale.svc.cluster.local/loki/api/v1/push"
+              follow_redirects   = false
+              batch_size         = "128KiB"
+              batch_wait         = "2s"
+              remote_timeout     = "15s"
+              min_backoff_period = "1s"
+              max_backoff_period = "10s"
+              max_backoff_retries = 5
+              retry_on_http_429   = true
+
+              basic_auth {
+                username      = "talos-logs"
+                password_file = "/etc/alloy/logs-ingestion/password"
+              }
+
+              tls_config {
+                server_name = "metrics.${BASE_DOMAIN}"
+              }
+            }
+          }

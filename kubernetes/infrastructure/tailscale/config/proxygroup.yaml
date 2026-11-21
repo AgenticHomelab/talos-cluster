@@ -1,0 +1,10 @@
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyGroup
+metadata:
+  name: talos-home-egress
+spec:
+  type: egress
+  replicas: 2
+  hostnamePrefix: talos-home-egress
+  tags:
+    - tag:k8s-egress

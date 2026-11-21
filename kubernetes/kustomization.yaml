@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - applications/aiostreams
+  - applications/borgwarehouse
+  - applications/ebooks
+  - applications/immich
+  - applications/matrix
+  - applications/matrix-element
+  - applications/matrix-signal
+  - applications/matrix-whatsapp
+  - applications/mumble
+  - applications/valheim
+  - applications/vaultwarden
+  - applications/whoami
+  - infrastructure/authentik
+  - infrastructure/barman-cloud
+  - infrastructure/cert-manager
+  - infrastructure/cloudflare-ddns
+  - infrastructure/cloudnative-pg
+  - infrastructure/external-dns
+  - infrastructure/external-services
+  - infrastructure/flux-operator
+  - infrastructure/flux-web-ui
+  - infrastructure/hermes-admin
+  - infrastructure/hermes-readonly
+  - infrastructure/kube-dns
+  - infrastructure/longhorn
+  - infrastructure/metallb
+  - infrastructure/network-policy-probe
+  - infrastructure/snapshot-controller
+  - infrastructure/tailscale
+  - infrastructure/traefik
+  - infrastructure/truenas-csi
+  - observability/alloy
+  - observability/kube-state-metrics
+  - observability/metrics-server

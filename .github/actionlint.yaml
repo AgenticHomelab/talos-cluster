@@ -1,0 +1,6 @@
+# actionlint v1.7.12 does not yet recognize GitHub-hosted ubuntu-26.04.
+# Keep runner-label validation enabled and suppress only this known false positive.
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      - 'label "ubuntu-26\.04" is unknown'

@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-mas-config
+  namespace: matrix
+data:
+  config.yaml: |
+    http:
+      public_base: https://matrix-auth.${BASE_DOMAIN}/
+      issuer: https://matrix-auth.${BASE_DOMAIN}/
+      listeners:
+        - name: web
+          binds:
+            - address: "[::]:8080"
+          resources:
+            - name: discovery
+            - name: human
+            - name: oauth
+            - name: compat
+            - name: graphql
+            - name: assets
+              path: /usr/local/share/mas-cli/assets/
+        - name: health
+          binds:
+            - address: "[::]:8081"
+          resources:
+            - name: health
+
+    matrix:
+      kind: synapse
+      homeserver: ${BASE_DOMAIN}
+      endpoint: http://matrix-synapse.matrix.svc.cluster.local:8008
+      secret_file: /run/secrets/mas/matrix-shared-secret
+
+    passwords:
+      enabled: false
+
+    upstream_oauth2:
+      providers:
+        - id: 01JAZ000000000000000000000
+          issuer: https://auth.${BASE_DOMAIN}/application/o/matrix/
+          human_name: Authentik
+          client_id: matrix-authentication-service
+          client_secret_file: /run/secrets/mas/oidc-client-secret
+          token_endpoint_auth_method: client_secret_basic
+          scope: "openid profile email"
+          claims_imports:
+            subject:
+              template: "{{ user.sub }}"
+            localpart:
+              action: require
+              template: "{{ user.preferred_username }}"
+              on_conflict: fail
+            displayname:
+              action: force
+              template: "{{ user.name }}"
+            email:
+              action: force
+              template: "{{ user.email }}"
+
+    email:
+      transport: blackhole
+
+    captcha:
+      service: ~
+
+  secrets.yaml: |
+    database:
+      uri: "postgresql://mas:__DATABASE_PASSWORD__@matrix-postgres-rw.matrix.svc.cluster.local:5432/mas"
+      min_connections: 1
+      max_connections: 10
+      connect_timeout: 30
+      idle_timeout: 600
+      max_lifetime: 1800
+
+    secrets:
+      encryption: __ENCRYPTION_SECRET__
+      keys:
+        - key_file: /run/secrets/mas/rsa.pem

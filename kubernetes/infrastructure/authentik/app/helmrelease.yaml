@@ -1,0 +1,105 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authentik
+  namespace: authentik
+spec:
+  interval: 30m
+  timeout: 15m
+
+  chart:
+    spec:
+      # renovate: datasource=helm depName=authentik registryUrl=https://charts.goauthentik.io
+      chart: authentik
+      version: "2026.8.6"
+      sourceRef:
+        kind: HelmRepository
+        name: authentik
+        namespace: flux-system
+      interval: 24h
+
+  valuesFrom:
+    - kind: Secret
+      name: authentik-values
+      valuesKey: secret_key
+      targetPath: authentik.secret_key
+    - kind: Secret
+      name: authentik-values
+      valuesKey: postgres_password
+      targetPath: authentik.postgresql.password
+
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+
+  values:
+    global:
+      affinity:
+        podAntiAffinity: hard
+
+    authentik:
+      log_level: info
+      error_reporting:
+        enabled: false
+      postgresql:
+        host: authentik-postgres-rw.authentik.svc.cluster.local
+        port: 5432
+        name: authentik
+        user: authentik
+
+    server:
+      replicas: 2
+      pdb:
+        enabled: true
+        minAvailable: 1
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          network-exposure: internal
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+          external-dns.kubernetes.io/hostname: auth.${BASE_DOMAIN}
+          external-dns.kubernetes.io/target: traefik.${BASE_DOMAIN}
+          external-dns.kubernetes.io/cloudflare-proxied: "false"
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+        hosts:
+          - auth.${BASE_DOMAIN}
+        tls:
+          - secretName: authentik-tls
+            hosts:
+              - auth.${BASE_DOMAIN}
+
+    worker:
+      replicas: 2
+      envFrom:
+        - secretRef:
+            name: authentik-matrix-oidc
+      pdb:
+        enabled: true
+        minAvailable: 1
+      volumeMounts:
+        - name: hermes-blueprint
+          mountPath: /blueprints/custom/hermes
+          readOnly: true
+        - name: matrix-blueprint
+          mountPath: /blueprints/custom/matrix
+          readOnly: true
+      volumes:
+        - name: hermes-blueprint
+          configMap:
+            name: authentik-hermes-blueprint
+            defaultMode: 0444
+        - name: matrix-blueprint
+          configMap:
+            name: authentik-matrix-blueprint
+            defaultMode: 0444
+
+    postgresql:
+      enabled: false

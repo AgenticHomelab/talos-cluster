@@ -1,0 +1,156 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>bjw-s/renovate-config#794b01f9408c880a88323729deb83507417175c9"
+  ],
+  "timezone": "Europe/Helsinki",
+  "dependencyDashboard": true,
+  "dependencyDashboardApproval": false,
+  "configMigration": false,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "automerge": false,
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 8,
+  "rebaseWhen": "auto",
+  "addLabels": [
+    "dependencies"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "vulnerabilityFixStrategy": "lowest",
+    "labels": [
+      "security",
+      "renovate/security"
+    ],
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "flux": {
+    "managerFilePatterns": [
+      "/^kubernetes/.+\\.ya?ml$/"
+    ]
+  },
+  "helm-values": {
+    "managerFilePatterns": [
+      "/^kubernetes/.+/(?:values\\.ya?ml|values/.+\\.ya?ml)$/"
+    ]
+  },
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/^kubernetes/.+\\.ya?ml$/"
+    ]
+  },
+  "ignorePaths": [
+    "**/*.sops.yaml"
+  ],
+  "packageRules": [
+    {
+      "description": "Flag Flux control-plane updates",
+      "matchFileNames": [
+        "kubernetes/flux/**",
+        "kubernetes/infrastructure/flux-operator/**"
+      ],
+      "addLabels": [
+        "renovate/platform"
+      ]
+    },
+    {
+      "description": "Flag cluster networking and ingress updates",
+      "matchFileNames": [
+        "kubernetes/infrastructure/kube-dns/**",
+        "kubernetes/infrastructure/traefik/**",
+        "kubernetes/infrastructure/metallb/**",
+        "kubernetes/infrastructure/external-dns/**"
+      ],
+      "addLabels": [
+        "renovate/networking"
+      ]
+    },
+    {
+      "description": "Flag persistent storage and database updates",
+      "matchFileNames": [
+        "kubernetes/infrastructure/longhorn/**",
+        "kubernetes/infrastructure/cloudnative-pg/**",
+        "kubernetes/infrastructure/barman-cloud/**"
+      ],
+      "addLabels": [
+        "renovate/storage-data"
+      ]
+    },
+    {
+      "description": "Flag identity, authentication and certificate updates",
+      "matchFileNames": [
+        "kubernetes/infrastructure/authentik/**",
+        "kubernetes/applications/matrix/**",
+        "kubernetes/infrastructure/cert-manager/**"
+      ],
+      "addLabels": [
+        "renovate/identity-security"
+      ]
+    },
+    {
+      "description": "Never require Dependency Dashboard approval for Renovate PR creation",
+      "matchPackageNames": [
+        "*"
+      ],
+      "dependencyDashboardApproval": false
+    },
+    {
+      "description": "Longhorn chart updates use the earlier GitHub Actions merge window",
+      "matchFileNames": [
+        "kubernetes/infrastructure/longhorn/**"
+      ]
+    },
+    {
+      "description": "Do not automatically merge Talos Linux or Kubernetes version updates",
+      "matchPackageNames": [
+        "siderolabs/talos",
+        "kubernetes/kubernetes"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Block unavailable Traefik chart 42.4.0 until upstream publishes it",
+      "matchDatasources": [
+        "helm"
+      ],
+      "matchPackageNames": [
+        "traefik"
+      ],
+      "allowedVersions": "!/^42\\.4\\.0$/"
+    },
+    {
+      "description": "Block unavailable Tailscale operator chart 1.104.7 until upstream publishes it",
+      "matchDatasources": [
+        "helm"
+      ],
+      "matchPackageNames": [
+        "tailscale-operator"
+      ],
+      "allowedVersions": "!/^1\\.104\\.7$/"
+    },
+    {
+      "description": "Exclude the confirmed broken Valheim container image 3.8.11; keep other updates eligible",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "mbround18/valheim"
+      ],
+      "matchFileNames": [
+        "kubernetes/applications/valheim/**"
+      ],
+      "allowedVersions": "!/^3\\.8\\.11$/"
+    },
+    {
+      "description": "GitHub Actions owns nightly merges; Renovate must never merge directly",
+      "matchPackageNames": [
+        "*"
+      ],
+      "automerge": false
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  distribution:
+    version: "2.9.6"
+    registry: "ghcr.io/fluxcd"
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+  cluster:
+    type: kubernetes
+    size: small
+    multitenant: false
+    networkPolicy: true
+    domain: cluster.local
+  sync:
+    kind: GitRepository
+    url: https://github.com/AgenticHomelab/talos-cluster
+    ref: refs/heads/main
+    path: ./kubernetes/clusters/talos-home
+  kustomize:
+    patches:
+      - target:
+          kind: Kustomization
+          name: flux-system
+        patch: |
+          - op: add
+            path: /spec/decryption
+            value:
+              provider: sops
+              secretRef:
+                name: sops-age

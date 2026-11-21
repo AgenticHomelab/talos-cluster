@@ -1,0 +1,43 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: matrix-mas
+  namespace: matrix
+spec:
+  name: mas
+  owner: mas
+  cluster:
+    name: matrix-postgres
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: matrix-mautrix-signal
+  namespace: matrix
+spec:
+  name: mautrix_signal
+  owner: mautrix_signal
+  cluster:
+    name: matrix-postgres
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: matrix-mautrix-whatsapp
+  namespace: matrix
+spec:
+  name: mautrix_whatsapp
+  owner: mautrix_whatsapp
+  cluster:
+    name: matrix-postgres
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: matrix-mautrix-discord
+  namespace: matrix
+spec:
+  name: mautrix_discord
+  owner: mautrix_discord
+  cluster:
+    name: matrix-postgres

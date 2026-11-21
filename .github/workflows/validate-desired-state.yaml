@@ -1,0 +1,163 @@
+name: Validate desired state
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desired-state-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  # Offline Helm compatibility fixture, not the authoritative Talos/Omni pin.
+  # Must be reviewed alongside separately approved Kubernetes upgrades.
+  HELM_KUBERNETES_VERSION: v1.37.2
+  KUBECTL_VERSION: v1.36.2
+  KUBECTL_SHA256: 1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82
+  HELM_VERSION: v4.2.4
+  HELM_SHA256: c306b46f719b0a4da32d0f78ee21bf90ce8d602f15b22ab753f0674d1670a7f3
+  FLUX_VERSION: 2.9.2
+  FLUX_SHA256: 4092b367fd060097976fb7261601f79420ecf7266328417dfd8dfee27de0e6a3
+  TRUENAS_CSI_CHART_SHA256: 3a1b9f326447d54beb3fec20e3b026a4a07f68cb7f3685c7a71f7e9d70589367
+  YQ_VERSION: v4.53.3
+  YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+  RIPGREP_VERSION: 14.1.1
+  RIPGREP_SHA256: 4cf9f2741e6c465ffdb7c26f38056a59e2a2544b51f7cc128ef28337eeae4d8e
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+  RENOVATE_VERSION: 43.278.3
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_ARCHIVE_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  validate:
+    name: desired-state
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js for Renovate validation
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 26.13.1
+
+      - name: Install pinned validation tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="${RUNNER_TEMP}/validation-bin"
+          mkdir -p "$install_dir"
+
+          download() {
+            local url="$1" output="$2" expected="$3"
+            curl --fail --silent --show-error --location \
+              --proto '=https' --tlsv1.2 "$url" --output "$output"
+            printf '%s  %s\n' "$expected" "$output" | sha256sum --check --status
+          }
+
+          download \
+            "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
+            "$install_dir/kubectl" "$KUBECTL_SHA256"
+          chmod 0755 "$install_dir/kubectl"
+
+          helm_archive="${RUNNER_TEMP}/helm.tar.gz"
+          download "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
+            "$helm_archive" "$HELM_SHA256"
+          tar --extract --gzip --file "$helm_archive" --directory "${RUNNER_TEMP}" linux-amd64/helm
+          install -m 0755 "${RUNNER_TEMP}/linux-amd64/helm" "$install_dir/helm"
+
+          flux_archive="${RUNNER_TEMP}/flux.tar.gz"
+          download \
+            "https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/flux_${FLUX_VERSION}_linux_amd64.tar.gz" \
+            "$flux_archive" "$FLUX_SHA256"
+          tar --extract --gzip --file "$flux_archive" --directory "$install_dir" flux
+          chmod 0755 "$install_dir/flux"
+
+          download \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
+            "$install_dir/yq" "$YQ_SHA256"
+          chmod 0755 "$install_dir/yq"
+
+          rg_archive="${RUNNER_TEMP}/ripgrep.tar.gz"
+          download \
+            "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+            "$rg_archive" "$RIPGREP_SHA256"
+          tar --extract --gzip --file "$rg_archive" --directory "${RUNNER_TEMP}"
+          install -m 0755 \
+            "${RUNNER_TEMP}/ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl/rg" \
+            "$install_dir/rg"
+
+          actionlint_archive="${RUNNER_TEMP}/actionlint.tar.gz"
+          download \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            "$actionlint_archive" "$ACTIONLINT_SHA256"
+          tar --extract --gzip --file "$actionlint_archive" \
+            --directory "$install_dir" actionlint
+          chmod 0755 "$install_dir/actionlint"
+
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Install envsubst
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gettext-base
+
+      - name: Validate workflows and Renovate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          actionlint .github/workflows/*.yaml
+          npx --yes --package "renovate@${RENOVATE_VERSION}" \
+            renovate-config-validator --no-global --strict renovate.json
+
+      - name: Scan the current candidate tree for credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/gitleaks.tar.gz"
+          curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$GITLEAKS_ARCHIVE_SHA256" "$archive" |
+            sha256sum --check --status
+          tar --extract --gzip --file "$archive" --directory "${RUNNER_TEMP}" gitleaks
+          chmod 0755 "${RUNNER_TEMP}/gitleaks"
+          # Scan checked-out files only: importing private Git history is forbidden.
+          # Redact matched values in logs; a finding is a hard CI failure.
+          "${RUNNER_TEMP}/gitleaks" dir --no-banner --redact=100 .
+
+      - name: Fetch exact upstream charts for offline rendering
+        shell: bash
+        run: |
+          set -euo pipefail
+          chart_dir="$RUNNER_TEMP/charts"
+          mkdir -p "$chart_dir"
+          for entry in "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
+            read -r unit_category unit <<<"$entry"
+            version=$(yq -r '.spec.chart.spec.version' "kubernetes/$unit_category/$unit/app/helmrelease.yaml")
+            repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
+            helm pull "$unit" --repo "$repository" --version "$version" --destination "$chart_dir"
+          done
+          printf '%s  %s\n' \
+            "$TRUENAS_CSI_CHART_SHA256" \
+            "$chart_dir/truenas-csi-1.4.0.tgz" | sha256sum --check --status
+
+      - name: Validate complete desired state
+        shell: bash
+        env:
+          HELM_CHARTS_DIR: ${{ runner.temp }}/charts
+        run: ./scripts/validate-complete-desired-state.sh

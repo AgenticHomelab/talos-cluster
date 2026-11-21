@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: element-web-config
+  namespace: matrix-element
+data:
+  config.json: |
+    {
+      "default_server_name": "${BASE_DOMAIN}",
+      "default_server_config": {
+        "m.homeserver": {
+          "base_url": "https://matrix.${BASE_DOMAIN}",
+          "server_name": "${BASE_DOMAIN}"
+        }
+      },
+      "disable_custom_urls": true,
+      "disable_guests": true,
+      "disable_3pid_login": true,
+      "brand": "Element",
+      "default_theme": "dark",
+      "default_federate": true,
+      "room_directory": {
+        "servers": []
+      }
+    }

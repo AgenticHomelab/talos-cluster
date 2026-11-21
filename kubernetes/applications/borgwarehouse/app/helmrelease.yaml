@@ -1,0 +1,150 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: borgwarehouse
+  namespace: borgwarehouse
+spec:
+  interval: 30m
+  timeout: 10m
+
+  chartRef:
+    kind: OCIRepository
+    name: bjw-s-app-template
+    namespace: flux-system
+
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+
+        pod:
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+
+        containers:
+          main:
+            image:
+              repository: borgwarehouse/borgwarehouse
+              tag: v3.8.1
+              pullPolicy: IfNotPresent
+
+            env:
+              FQDN: borg.${BASE_DOMAIN}
+              BETTER_AUTH_URL: https://borg.${BASE_DOMAIN}
+              NEXTAUTH_URL: https://borg.${BASE_DOMAIN}
+              WEB_SERVER_PORT: "3000"
+              SSH_SERVER_PORT: "2222"
+              UNIX_USER: borgwarehouse
+              PUID: "1001"
+              PGID: "1001"
+              NEXT_TELEMETRY_DISABLED: "1"
+
+            envFrom:
+              - secretRef:
+                  name: borgwarehouse-secret
+
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 3000
+                  initialDelaySeconds: 30
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 3000
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: 1000m
+                memory: 1Gi
+
+            securityContext:
+              allowPrivilegeEscalation: false
+
+    service:
+      web:
+        controller: main
+        ports:
+          http:
+            port: 3000
+
+      ssh:
+        controller: main
+        ports:
+          ssh:
+            port: 22
+
+    ingress:
+      main:
+        className: traefik
+        annotations:
+          network-exposure: internal
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+          external-dns.kubernetes.io/hostname: borg.${BASE_DOMAIN}
+          external-dns.kubernetes.io/target: traefik.${BASE_DOMAIN}
+          external-dns.kubernetes.io/cloudflare-proxied: "false"
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+        hosts:
+          - host: borg.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: web
+                  port: http
+        tls:
+          - secretName: borgwarehouse-tls
+            hosts:
+              - borg.${BASE_DOMAIN}
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: borgwarehouse-truenas
+        globalMounts: []
+        advancedMounts:
+          main:
+            main:
+              - path: /home/borgwarehouse/app/config
+                subPath: config
+              - path: /home/borgwarehouse/.ssh
+                subPath: ssh
+              - path: /etc/ssh
+                subPath: ssh_host
+              - path: /home/borgwarehouse/repos
+                subPath: repos
+              - path: /home/borgwarehouse/tmp
+                subPath: tmp
+              - path: /home/borgwarehouse/logs
+                subPath: logs

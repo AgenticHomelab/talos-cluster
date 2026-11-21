@@ -1,0 +1,81 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-state-metrics
+  namespace: kube-state-metrics
+spec:
+  # Active following reviewed GitOps activation; no direct Helm operations.
+  suspend: false
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      # renovate: datasource=helm depName=kube-state-metrics registryUrl=https://prometheus-community.github.io/helm-charts
+      chart: kube-state-metrics
+      version: "9.0.1"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: kube-state-metrics
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+  values:
+    fullnameOverride: kube-state-metrics
+    replicas: 1
+    collectors:
+      - nodes
+      - pods
+      - deployments
+      - statefulsets
+    metricAllowlist:
+      - kube_node_status_condition
+      - kube_node_status_allocatable
+      - kube_pod_status_phase
+      - kube_pod_container_status_restarts_total
+      - kube_pod_container_resource_requests
+      - kube_pod_container_resource_limits
+      - kube_deployment_spec_replicas
+      - kube_deployment_status_replicas_available
+      - kube_statefulset_replicas
+      - kube_statefulset_status_replicas_ready
+    metricLabelsAllowlist: []
+    metricAnnotationsAllowList: []
+    rbac:
+      create: true
+      useClusterRole: true
+      extraRules: []
+    serviceAccount:
+      create: true
+      name: kube-state-metrics
+    service:
+      type: ClusterIP
+    prometheus:
+      monitor:
+        enabled: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    securityContext:
+      enabled: true
+      runAsNonRoot: true
+      runAsUser: 65534
+      runAsGroup: 65534
+      fsGroup: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL

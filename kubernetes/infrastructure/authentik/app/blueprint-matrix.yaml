@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentik-matrix-blueprint
+  namespace: authentik
+data:
+  matrix.yaml: |
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Matrix Authentication Service
+      labels:
+        blueprints.goauthentik.io/instantiate: "true"
+
+    entries:
+      - id: matrix-users-group
+        model: authentik_core.group
+        state: present
+        identifiers:
+          name: Matrix Users
+        attrs:
+          name: Matrix Users
+
+      - id: matrix-users-policy
+        model: authentik_policies_expression.expressionpolicy
+        state: present
+        identifiers:
+          name: Matrix Users only
+        attrs:
+          name: Matrix Users only
+          expression: |
+            return ak_is_group_member(request.user, name="Matrix Users")
+
+      - id: matrix-oidc-provider
+        model: authentik_providers_oauth2.oauth2provider
+        state: present
+        identifiers:
+          name: Matrix Authentication Service
+        attrs:
+          name: Matrix Authentication Service
+          authentication_flow: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+          client_type: confidential
+          client_id: matrix-authentication-service
+          client_secret: !Env MATRIX_OIDC_CLIENT_SECRET
+          redirect_uris:
+            - matching_mode: strict
+              url: https://matrix-auth.${BASE_DOMAIN}/upstream/callback/01JAZ000000000000000000000
+              redirect_uri_type: authorization
+          grant_types:
+            - authorization_code
+            - refresh_token
+          property_mappings:
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+          signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+          sub_mode: hashed_user_id
+          issuer_mode: per_provider
+          include_claims_in_id_token: true
+          access_code_validity: minutes=1
+          access_token_validity: minutes=5
+          refresh_token_validity: hours=1
+
+      - id: matrix-oidc-application
+        model: authentik_core.application
+        state: present
+        identifiers:
+          slug: matrix
+        attrs:
+          name: Matrix
+          provider: !KeyOf matrix-oidc-provider
+          meta_launch_url: https://chat.${BASE_DOMAIN}
+          open_in_new_tab: true
+          policy_engine_mode: all
+
+      - id: matrix-users-binding
+        model: authentik_policies.policybinding
+        state: present
+        identifiers:
+          target: !KeyOf matrix-oidc-application
+          policy: !KeyOf matrix-users-policy
+          order: 0
+        attrs:
+          enabled: true

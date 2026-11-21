@@ -1,0 +1,24 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flux-operator
+  namespace: flux-system
+  annotations:
+    # Removing the registry entry must not uninstall the GitOps control plane.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  interval: 30m
+  releaseName: flux-operator
+  targetNamespace: flux-system
+  storageNamespace: flux-system
+  serviceAccountName: flux-operator
+  chartRef:
+    kind: OCIRepository
+    name: flux-operator
+  install:
+    createNamespace: false
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    installCRDs: true

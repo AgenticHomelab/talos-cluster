@@ -1,0 +1,40 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authentik-postgres
+  namespace: authentik
+spec:
+  instances: 3
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: required
+
+  postgresql:
+    parameters:
+      max_slot_wal_keep_size: "10GB"
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
+
+  bootstrap:
+    initdb:
+      database: authentik
+      owner: authentik
+      secret:
+        name: authentik-postgres-user
+
+  storage:
+    size: 30Gi
+    storageClass: longhorn
+
+  monitoring:
+    enablePodMonitor: false
+
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: authentik-postgres-backups

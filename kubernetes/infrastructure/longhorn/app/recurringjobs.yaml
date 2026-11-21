@@ -1,0 +1,45 @@
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: backup-daily
+  namespace: longhorn-system
+spec:
+  task: backup
+  cron: "15 3 * * *"
+  retain: 14
+  concurrency: 1
+  groups:
+    - default
+  labels:
+    backup.longhorn.io/schedule: daily
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: snapshot-6h
+  namespace: longhorn-system
+spec:
+  task: snapshot
+  cron: "0 */6 * * *"
+  retain: 8
+  concurrency: 1
+  groups:
+    - default
+  labels:
+    backup.longhorn.io/schedule: local-snapshot
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: filesystem-trim-weekly
+  namespace: longhorn-system
+spec:
+  task: filesystem-trim
+  cron: "30 4 * * 0"
+  retain: 1
+  concurrency: 1
+  groups:
+    - default
+  labels:
+    backup.longhorn.io/schedule: weekly-trim

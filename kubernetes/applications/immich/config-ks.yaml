@@ -1,0 +1,32 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: immich-config
+  namespace: flux-system
+spec:
+  # App-stage rollout candidate: only a separately approved PR merge may
+  # activate this HelmRelease; database preflight is recorded in docs/immich.md.
+  suspend: false
+  interval: 10m
+  retryInterval: 1m
+  path: ./kubernetes/applications/immich/config
+  prune: true
+  wait: true
+  timeout: 20m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: homelab-private-vars
+  dependsOn:
+    - name: homelab-private-config
+    - name: immich
+    - name: traefik
+    - name: cert-manager-config
+    - name: external-dns
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

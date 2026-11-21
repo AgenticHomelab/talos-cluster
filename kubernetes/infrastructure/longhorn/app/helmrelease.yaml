@@ -1,0 +1,70 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn
+  namespace: longhorn-system
+spec:
+  interval: 30m
+  targetNamespace: longhorn-system
+  chart:
+    spec:
+      # renovate: datasource=helm depName=longhorn registryUrl=https://charts.longhorn.io
+      chart: longhorn
+      version: "1.13.0"
+      sourceRef:
+        kind: HelmRepository
+        name: longhorn
+        namespace: flux-system
+  install:
+    createNamespace: true
+  values:
+    preUpgradeChecker:
+      jobEnabled: false
+
+    persistence:
+      defaultClass: true
+      defaultClassReplicaCount: 3
+      defaultFsType: ext4
+      defaultDataLocality: disabled
+
+    defaultBackupStore:
+      backupTarget: ${LONGHORN_BACKUP_TARGET}
+      backupTargetCredentialSecret: ""
+      pollInterval: 300
+
+    defaultSettings:
+      # Native V1 engine upgrades after a Longhorn manager upgrade; max one per node.
+      concurrentAutomaticEngineUpgradePerNodeLimit: 1
+      defaultReplicaCount: 3
+      disableSchedulingOnCordonedNode: true
+      nodeDrainPolicy: block-if-contains-last-replica
+      defaultDataPath: /var/mnt/longhorn-data
+      defaultDataLocality: disabled
+      replicaSoftAntiAffinity: false
+      replicaDiskSoftAntiAffinity: false
+      replicaAutoBalance: best-effort
+      allowVolumeCreationWithDegradedAvailability: false
+      nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+      storageMinimalAvailablePercentage: 10
+      storageOverProvisioningPercentage: 100
+      storageReservedPercentageForDefaultDisk: 10
+
+    csi:
+      # No deployed StorageClass/PV uses CSI Secret references.
+      allowControllerSecretAccess: false
+      podAntiAffinityPreset: hard
+      attacherReplicaCount: 3
+      provisionerReplicaCount: 3
+      resizerReplicaCount: 3
+      snapshotterReplicaCount: 3
+
+    networkPolicies:
+      # Verified host-to-local-instance-manager routes and TCP/3260 peers.
+      v1DataEngineInitiatorSourceCIDRs:
+        - ${LONGHORN_INITIATOR_CIDR_1}
+        - ${LONGHORN_INITIATOR_CIDR_2}
+        - ${LONGHORN_INITIATOR_CIDR_3}
+
+    service:
+      ui:
+        type: ClusterIP
