@@ -221,6 +221,40 @@ Offsite Omni etcd snapshots do not include Longhorn PVCs, CNPG databases or
 TrueNAS-hosted application data. Keep recovery templates, ownership boundaries
 and retained OCI-host recovery dependencies until explicitly reviewed.
 
+## Public/private evidence and documentation boundary
+
+Choose the destination by **content and audience**, not merely by file type or
+whether the work is called a test, report, log, issue or documentation.
+
+- Keep reusable designs, sanitized examples, declarative non-secret configuration,
+  broadly useful agent guidance, normal procedures, safe tests and concise
+  non-sensitive acceptance results in the owning repository, including public
+  repositories. Public documentation is encouraged, not forbidden.
+- Put homelab-specific sensitive findings, detailed live security/recovery
+  exercises, private access or network inventories, identifying operational
+  evidence, and unsanitized test reports in the permanently private
+  `AgenticHomelab/homelab-secrets` repository when they need a durable record.
+  Publish a short sanitized outcome or link from the owning public repository
+  when useful; do not duplicate the private evidence.
+- **Never commit actual secret values, decrypted output, private keys, recovery
+  credentials, token-bearing URLs, or raw sensitive state/plans/logs to either
+  repository.** Keep those in their approved secret or recovery custody.
+  Private Git access is not permission to store plaintext secrets.
+- Before creating an issue, PR, attachment, document, test fixture, CI artifact,
+  failure log or incident report in a public repository, examine its exact
+  contents and metadata for sensitive environment details. Avoid live data
+  capture in public CI; sanitize before publishing, not afterward.
+- Use judgment: ordinary non-secret hostnames, architectural relationships,
+  public service URLs, placeholder addresses, reproducible tests and abstract
+  lessons are not automatically sensitive. When a live detail would materially
+  aid unauthorized access or expose personal data, retain the specific evidence
+  privately and publish a useful generalized explanation instead.
+- These rules apply to historical Git content and issue/PR/Actions artifacts as
+  well as the current working tree. A private-to-public visibility change or a
+  history-preserving repository transfer requires a separate history/metadata
+  release audit and explicit authorization. Never assume a clean current tree
+  makes old commits safe to publish.
+
 ## Repository publication
 
 This GitOps source is prepared as a history-free export. The original GitOps
