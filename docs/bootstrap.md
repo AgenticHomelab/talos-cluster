@@ -32,8 +32,10 @@ Create the `flux-system` namespace and provision the two bootstrap Secrets outsi
 - `flux-system/sops-age` from the authorized age recovery identity.
 - `flux-system/homelab-secrets-git` with the independent read-only SSH deploy key for `AgenticHomelab/homelab-secrets` and verified `known_hosts` entries.
 
-The public GitOps source uses anonymous HTTPS. During migration, retain the
-original private GitOps repository and its SSH deploy credential for rollback.
+The production `flux-system` source reads this repository over anonymous
+HTTPS. Retain the original private GitOps repository and its SSH deploy
+credential for rollback. The independent private Git source keeps its own SSH
+identity, and neither source change requires a new age identity.
 Keep all private identities out of Git and logs. Register only the corresponding
 public SSH key as a read-only deploy key on the private repository.
 
