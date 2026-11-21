@@ -1,14 +1,11 @@
 # Private-first publication readiness
 
-Status: **PRIVATE / NOT CLEARED FOR PUBLICATION**. This is a future release
-checklist, not authorization to publish, rewrite history, create a public
-repository or change the live Flux source.
+AgenticHomelab/talos-cluster was published from a reviewed, sanitized root
+commit on 2026-11-21. The production Flux source switched separately after
+operator approval. The original GitOps history and the independent
+`homelab-secrets` source remain private.
 
-The primary near-term goal is a stable, maintainable, agent-friendly private
-homelab repository. Public release is the **last** milestone, after operational
-and security requirements have been satisfied in private.
-
-## Improve the private repository first
+## Maintain the publication boundary
 
 - Keep credentials, generated Talos and Omni identities, kubeconfigs, age
   identities, OpenTofu state, live backup artifacts and sensitive host data
@@ -39,9 +36,9 @@ and security requirements have been satisfied in private.
    endpoints need rotation or redesign before publication.
 3. Review GitHub App installation permissions, deploy keys, workflows, token
    scopes, Renovate configuration, branch rules and fork/PR execution risks.
-   Current repository metadata does **not** demonstrate mandatory branch
-   protection; address this before relying on PR/CI as an enforced security
-   boundary.
+   Public main requires pull requests and a strict `desired-state` check
+   from GitHub Actions. These protections apply to administrators. External
+   fork workflows require approval.
 4. Review all documentation, screenshots, manifests and files selected for
    the new repository for personal or infrastructure metadata. Choose a license
    and third-party notice policy explicitly; there is no automatic license choice.
