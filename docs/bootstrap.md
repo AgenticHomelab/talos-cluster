@@ -32,10 +32,23 @@ Create the `flux-system` namespace and provision the two bootstrap Secrets outsi
 - `flux-system/sops-age` from the authorized age recovery identity.
 - `flux-system/homelab-secrets-git` with the independent read-only SSH deploy key for `AgenticHomelab/homelab-secrets` and verified `known_hosts` entries.
 
-The production `flux-system` source reads this repository over anonymous
-HTTPS. Retain the original private GitOps repository and its SSH deploy
-credential for rollback. The independent private Git source keeps its own SSH
-identity, and neither source change requires a new age identity.
+The production `flux-system` source reads `AgenticHomelab/talos-cluster`
+over anonymous HTTPS. `AgenticHomelab/homelab-secrets` is the independent
+private source and keeps its own read-only SSH deploy identity. Neither
+source requires a new age identity.
+
+The former `antief/talos-homelab` SSH source is a temporary historical
+rollback option, **not** a permanent recovery dependency. Before archiving
+that repository, verify the active Flux URL, all consumers and independent
+access to a known-good revision of this public repository, the encrypted
+private Secret source, and the out-of-Git bootstrap identities. A supported
+recovery should reconstruct the same public and private sources and their
+existing Flux resource identities. A change to the active Flux source,
+revision, credentials or prune ownership requires a separately reviewed
+operational recovery plan; a Git revert cannot undo pruned resources.
+Do not delete an installed legacy deploy credential until its remaining
+consumers have been checked. Archiving the old repository does not prove
+its historical SSH rollback has been replaced.
 Keep all private identities out of Git and logs. Register only the corresponding
 public SSH key as a read-only deploy key on the private repository.
 
