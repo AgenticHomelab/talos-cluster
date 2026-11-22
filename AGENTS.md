@@ -4,6 +4,14 @@
 
 This repository manages a production-like personal Talos Kubernetes homelab through Flux GitOps.
 
+**Repository migration closed on 2026-11-22.** The four `AgenticHomelab/*`
+repositories are the accepted operational sources, including the installed
+Hermes Ansible source and the private SOPS/Talos assets. All three former
+`antief/*` repositories are private historical archives, not deployment or
+recovery sources. Do not treat historical migration plans, PRs or retrospective
+checklists as pending work. Current operating and recovery contracts take
+precedence; future infrastructure or credential changes retain their own gates.
+
 The three Talos control-plane nodes are physical mini PCs running Talos directly on the hardware, not TrueNAS-hosted VMs.
 Each has a dedicated, non-system NVMe volume for Longhorn data. TrueNAS is a
 separate NAS for selected NFS mounts and backups, not a Talos hypervisor.
