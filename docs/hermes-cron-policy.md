@@ -1,7 +1,7 @@
 # Hermes scheduling and ownership boundary
 
 Hermes gateway, dashboard, credentials, native scheduler and job definitions
-belong to `antief/oci-control-server`, not Flux. This document states the
+belong to the [Hermes operations sources](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md). This document states the
 current ownership policy, not proof of live job execution.
 
 ## Authorized native jobs
@@ -12,7 +12,7 @@ it does not send Matrix progress messages. `talos-nightly-report` sends exactly
 one concise Finnish Matrix summary at 07:00 daily, including when no changes
 occurred. A separate daily 09:00 native administrator-JWT lifecycle job was
 operator-authorized and acceptance-tested on 2026-10-29; the canonical
-operator runbook is [OCI administrator JWT lifecycle](https://github.com/antief/oci-control-server/blob/main/docs/hermes-admin-jwt-renewal.md).
+operator runbook is [OCI administrator JWT lifecycle](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-admin-jwt-renewal.md).
 Check live native job registration/runs before treating any schedule or
 credential renewal as currently healthy.
 
@@ -24,7 +24,7 @@ it does not routinely merge Renovate PRs. Its trusted-administrator authority
 for `talos-home` and `control-01` does not extend to OKE or unrelated OCI
 resources. See [the maintenance policy](renovate-review-policy.md),
 [the current Hermes access contract](agents/hermes-operational-access.md),
-and [OCI nightly maintenance](https://github.com/antief/oci-control-server/blob/main/docs/hermes-nightly-maintenance.md).
+and [OCI nightly maintenance](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-nightly-maintenance.md).
 
 ## Retired custom automation
 

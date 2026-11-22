@@ -2,8 +2,8 @@
 
 [Public OCI Ansible](https://github.com/AgenticHomelab/oci-control-server)
 owns normal host configuration, and Flux owns Kubernetes resources.
-The private `antief/oci-control-server` source owns the separate Hermes
-operational playbooks. Protected endpoints, native job identities and privilege
+The public OCI source also owns the isolated
+[Hermes operational playbooks](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md). Protected endpoints, native job identities and privilege
 boundaries belong in private operational documentation.
 
 The detailed machine addresses, service identities, historical records and
