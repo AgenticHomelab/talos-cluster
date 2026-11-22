@@ -134,9 +134,11 @@ Renovate creates eligible patch, minor and major dependency PRs. The dedicated
 GitHub Actions workflow merges them from 00:00 to 03:59 Europe/Helsinki
 (Longhorn chart/manager PRs from 00:00 to 01:59). Talos Linux and Kubernetes
 version changes are excluded and require separate operator-approved Omni
-procedures. `renovate.json` disables Renovate's own automerge; GitHub Actions
-intentionally skips `desired-state` for Renovate-authored PRs. Skipped CI is not a passed
-validation. Other changes retain operator review and the normal CI gate.
+procedures. `renovate.json` disables Renovate's own automerge. Renovate-authored PRs
+run the same offline `desired-state` GitHub Actions check as other PRs,
+including documentation-only changes. A pending, failed or skipped check is
+not passing validation. Other changes retain operator review and the
+normal CI gate.
 
 Flux normally reconciles merged Kubernetes changes. Hermes independently
 monitors deployed changes, diagnoses assigned incidents, and sends one Finnish
