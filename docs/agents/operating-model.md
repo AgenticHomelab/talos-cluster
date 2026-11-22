@@ -6,9 +6,9 @@ ciphertext and the Talos/Omni template and patches. Three physical Talos nodes
 use local Longhorn NVMe. TrueNAS is a separate NAS and backup failure domain.
 TrueNAS CSI owns the PVC datasets and exports it creates.
 
-The private `antief/oci-control-server` source owns Hermes fleet monitoring,
-administrative access preparation, Omni key renewal, TrueNAS OpenTofu access
-preparation and Renovate dispatch.
+The public OCI source owns the isolated Hermes Ansible playbooks.
+`AgenticHomelab/homelab-secrets/operations/hermes/` provides their protected
+assets and runbooks, including fleet monitoring and native renewal.
 
 ## Authorization and source of truth
 
@@ -60,7 +60,7 @@ lifecycle jobs remain disabled; the minimal GitHub Actions merge workflow is
 independent of those retired components. Native overnight Hermes health checks
 record locally; one Finnish Matrix summary is sent at 07:00
 Europe/Helsinki. See [native Renovate policy](../renovate-review-policy.md)
-and [OCI nightly maintenance](https://github.com/antief/oci-control-server/blob/main/docs/hermes-nightly-maintenance.md).
+and [OCI nightly maintenance](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-nightly-maintenance.md).
 
 ## Safety and recovery boundaries
 

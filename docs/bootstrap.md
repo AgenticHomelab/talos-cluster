@@ -37,18 +37,17 @@ over anonymous HTTPS. `AgenticHomelab/homelab-secrets` is the independent
 private source and keeps its own read-only SSH deploy identity. Neither
 source requires a new age identity.
 
-The former `antief/talos-homelab` SSH source is a temporary historical
-rollback option, **not** a permanent recovery dependency. Before archiving
-that repository, verify the active Flux URL, all consumers and independent
-access to a known-good revision of this public repository, the encrypted
-private Secret source, and the out-of-Git bootstrap identities. A supported
-recovery should reconstruct the same public and private sources and their
-existing Flux resource identities. A change to the active Flux source,
-revision, credentials or prune ownership requires a separately reviewed
-operational recovery plan; a Git revert cannot undo pruned resources.
-Do not delete an installed legacy deploy credential until its remaining
-consumers have been checked. Archiving the old repository does not prove
-its historical SSH rollback has been replaced.
+For source recovery, use the last accepted GitOps revision in this public
+repository and the matching private source revision from reconciliation
+evidence. Verify that the exact commits are independently reachable and that
+the two off-Git bootstrap identities remain available. Reconstruct the
+public HTTPS and independent private SSH sources with their existing Flux
+resource identities. A source, revision, credential or prune change requires
+a separately reviewed recovery plan. A Git revert cannot undo pruning.
+
+The former `antief/talos-homelab` SSH source is historical. The recovery
+procedure uses the two current sources above. Preserve any historical deploy
+credential until its own authorized credential review.
 Keep all private identities out of Git and logs. Register only the corresponding
 public SSH key as a read-only deploy key on the private repository.
 

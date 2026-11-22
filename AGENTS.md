@@ -118,8 +118,9 @@ Local Talos secrets, generated machine configuration, kubeconfigs, talosconfigs,
 Hermes has verified operator-directed GitHub contribution and scoped read-only
 Kubernetes inspection. The trusted-administrator exception below now authorizes
 assigned incident administration; unrelated work and recurring jobs remain outside
-that authority. The private `antief/oci-control-server` source owns the separate
-Hermes operational playbooks. Follow
+that authority. The public OCI Ansible source owns the isolated Hermes
+playbooks and the private configuration source supplies their protected assets.
+Follow
 [`docs/agents/operating-model.md`](docs/agents/operating-model.md) for the source
 and authorization boundaries.
 
@@ -282,7 +283,8 @@ while Talos Linux and Kubernetes versions are proposed in the private source and
 Longhorn manager/chart updates are eligible; native Longhorn V1 engine upgrades
 are enabled at one per node. See `docs/renovate-review-policy.md` and
 `docs/longhorn-upgrade.md`. Hermes's separately authorized nightly diagnostics,
-repairs and 07:00 Matrix report belong to `antief/oci-control-server`.
+repairs and 07:00 Matrix report use the organization-owned
+[Hermes operations sources](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md).
 The retired custom unattended runner, merger and lifecycle tools stay disabled;
 only the dedicated minimal GitHub Actions night merger is authorized.
 For independent audit tooling and external retirement gates, read
@@ -331,6 +333,6 @@ changed-file list and check the exact PR head, current `main` integration
 and applicable GitHub merge requirements. An inaccessible branch-protection API alone is not
 a blocker when GitHub reports the normal merge is permitted; never bypass
 actual required checks/reviews or use an administrator override. Follow the
-shared [documentation-maintenance contract](https://github.com/antief/oci-control-server/blob/main/docs/repository-documentation-maintenance.md)
+shared [documentation-maintenance contract](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/repository-documentation-maintenance.md)
 for the full decision and coordination rules. Prefer no change when there is
 no verifiable need; Hermes retains ownership of runtime incident work.

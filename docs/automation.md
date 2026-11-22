@@ -26,7 +26,7 @@ image/digest and test update when upgrading the controller.
 
 Flux deploys merged Kubernetes state, and Hermes monitors deployments, repairs
 incidents and sends the single 07:00 Finnish Matrix report.
-`antief/oci-control-server` owns Hermes's native jobs and credentials. See
+Hermes owns its native jobs. For their source and protected inputs, see
 [the Renovate review policy](renovate-review-policy.md) and
 [Longhorn upgrade guidance](longhorn-upgrade.md).
 
