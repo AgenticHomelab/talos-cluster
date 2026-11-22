@@ -16,11 +16,17 @@ images, render charts, run tests or access the cluster. GitHub may delay or
 drop scheduled runs despite this offset; the workflow checks the local clock
 immediately before each merge and never starts a new merge from 04:00.
 
-The existing `desired-state` CI job remains skipped for Renovate PRs;
-a skipped job is not a successful validation. Flux deploys merged Kubernetes
-state, and Hermes monitors deployments, repairs incidents and sends the
-single 07:00 Finnish Matrix report. `antief/oci-control-server` owns
-Hermes's native jobs and credentials. See
+The required `desired-state` CI runs for Renovate PRs as well as ordinary
+PRs. A failing or skipped check cannot authorize a merge. The snapshot-controller
+upstream manifests are vendored with SHA256 provenance checks and a separately
+pinned effective image/digest. Renovate excludes those upstream manifests:
+updating only their example image breaks provenance while leaving the deployed
+image unchanged. Review a coordinated upstream manifest, checksum, effective
+image/digest and test update when upgrading the controller.
+
+Flux deploys merged Kubernetes state, and Hermes monitors deployments, repairs
+incidents and sends the single 07:00 Finnish Matrix report.
+`antief/oci-control-server` owns Hermes's native jobs and credentials. See
 [the Renovate review policy](renovate-review-policy.md) and
 [Longhorn upgrade guidance](longhorn-upgrade.md).
 
