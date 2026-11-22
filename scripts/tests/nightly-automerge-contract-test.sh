@@ -15,6 +15,9 @@ assert "platformAutomerge" not in config
 assert config["rebaseWhen"] == "auto"
 assert config["vulnerabilityAlerts"]["enabled"] is True
 assert config["dependencyDashboardApproval"] is False
+# Upstream controller YAML is vendored, checksummed and image-pinned separately.
+assert "**/*.sops.yaml" in config["ignorePaths"]
+assert "kubernetes/infrastructure/snapshot-controller/config/upstream/**" in config["ignorePaths"]
 
 rules = config["packageRules"]
 assert all(rule.get("automerge") is not True for rule in rules)
