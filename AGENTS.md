@@ -313,13 +313,13 @@ Issues and PRDs are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`
 
 This repository uses a single-context domain-doc layout. See `docs/agents/domain.md`.
 
-## Autonomous documentation maintenance
+## Documentation maintenance
 
-The operator grants ChatGPT Scheduled and Hermes standing permission to propose
-necessary documentation-only changes in this repository using focused branches,
-Conventional Commits and PRs. This is a narrow exception to requiring a fresh
-per-edit assignment. It does not authorize runtime changes, modifications to
-secrets or publication, changes merely to satisfy a schedule, or duplicate PRs.
+Hermes has standing permission to propose necessary documentation-only
+corrections in this repository using focused branches, Conventional Commits
+and PRs. Other contributors follow their existing task authorization.
+This permission is limited to documentation. Make changes for verified
+problems and check for overlapping work first.
 
 Low-risk documentation PRs may be merged independently when they only correct
 verified facts, links, completed one-off instructions or readability without
