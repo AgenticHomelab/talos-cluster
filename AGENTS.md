@@ -225,7 +225,8 @@ and retained OCI-host recovery dependencies until explicitly reviewed.
 ## Repository publication
 
 Flux uses this public GitOps source. The original `antief/talos-homelab`
-repository remains private for rollback and historical reference.
+repository is a private historical archive. Use the current GitOps and
+private sources for rollback.
 `AgenticHomelab/homelab-secrets` remains permanently private.
 
 Keep reusable guidance, sanitized examples, declarative nonsecret configuration,
