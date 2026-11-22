@@ -123,9 +123,10 @@ excluded. Renovate-authored PRs now run the same offline
 `desired-state` Actions job as other source changes. A skipped
 or unsuccessful check is not passing validation. Hermes handles
 post-merge health/repair and the daily 07:00 Matrix summary,
-not routine merges. During migration the new repository merge job waits for
-`RENOVATE_NIGHTLY_MERGE_ENABLED=true` on the GitHub repository. Enable it
-only during the approved single-owner handover. See [Renovate policy](renovate-review-policy.md).
+not routine merges. The public repository's workflow owns the nightly merge.
+The workflow requires the repository variable
+`RENOVATE_NIGHTLY_MERGE_ENABLED=true`.
+See [Renovate policy](renovate-review-policy.md).
 
 Local non-mutating validation:
 

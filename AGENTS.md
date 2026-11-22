@@ -31,10 +31,9 @@ Persistent Kubernetes state belongs under `kubernetes/` and is reconciled by Flu
 Talos machine configuration, node-specific patches, and its validation tools live in the permanently private `AgenticHomelab/homelab-secrets/talos/` source. Omni remains the sole owner of machine state; Flux does not reconcile that private Talos source. Generated output, machine identities, and credentials remain local and ignored.
 
 The physical TrueNAS server's selected stable NAS infrastructure and
-TrueNAS-side service identities belong to `antief/truenas-infra` OpenTofu,
-not to Flux or this repository. The official TrueNAS CSI driver owns the
-PVC-specific child datasets and NFS exports it creates; never import these
-objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and SOPS
+TrueNAS-side service identities belong to `AgenticHomelab/truenas-infra` OpenTofu.
+The official TrueNAS CSI driver owns the PVC-specific child datasets and NFS
+exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and SOPS
 Secret delivery remain Flux-owned here. OCI Vault is the intended canonical
 source for stable project-managed TrueNAS API-key values; a currently deployed
 SOPS Secret is a consumer copy, not proof of completed Vault adoption. Do not
@@ -119,9 +118,10 @@ Local Talos secrets, generated machine configuration, kubeconfigs, talosconfigs,
 Hermes has verified operator-directed GitHub contribution and scoped read-only
 Kubernetes inspection. The trusted-administrator exception below now authorizes
 assigned incident administration; unrelated work and recurring jobs remain outside
-that authority. Its runtime,
-credentials, schedules and GitHub App grants belong to `antief/oci-control-server`. Follow
-[`docs/agents/operating-model.md`](docs/agents/operating-model.md).
+that authority. The private `antief/oci-control-server` source owns the separate
+Hermes operational playbooks. Follow
+[`docs/agents/operating-model.md`](docs/agents/operating-model.md) for the source
+and authorization boundaries.
 
 - Start with read-only inspection and sanitized health checks. Explicitly
   approve any future write scope, recurring action or host-side integration.
@@ -223,12 +223,23 @@ and retained OCI-host recovery dependencies until explicitly reviewed.
 
 ## Repository publication
 
-This GitOps source is prepared as a history-free export. The original GitOps
-repository and the private configuration repository remain private. Publication
-and production source cutover require separate approval.
-See [`docs/publication-readiness.md`](docs/publication-readiness.md).
-Do not rewrite Git history, mirror, transfer or change repository visibility
-during routine work.
+Flux uses this public GitOps source. The original `antief/talos-homelab`
+repository remains private for rollback and historical reference.
+`AgenticHomelab/homelab-secrets` remains permanently private.
+
+Keep reusable guidance, sanitized examples, declarative nonsecret configuration,
+safe tests and non-sensitive acceptance summaries with their owning source.
+Store durable sensitive operational evidence in the private source and use a
+sanitized summary or reference in public. Keep credentials, decrypted output,
+private keys, token-bearing URLs and raw sensitive state, plans or logs in their
+approved custody outside Git.
+
+Use the impact of disclosure to judge what belongs in private. Review the
+exact contents and metadata of public changes and artifacts before posting
+them. Keep private live inputs out of public CI. Apply the disclosure boundary to Git history, issues, PRs and CI
+outputs. For any separately authorized publication, transfer or source switch,
+follow [`docs/publication-readiness.md`](docs/publication-readiness.md).
+Routine work preserves repository visibility and Git history.
 
 ## Change workflow
 

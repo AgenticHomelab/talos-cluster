@@ -80,11 +80,9 @@ The platform has three storage classes of use:
 TrueNAS and the LAN are a separate failure domain and an accepted single point of failure for NFS-dependent workloads. A Longhorn backup stored on the same TrueNAS system is an operational recovery copy, not an independent disaster-recovery copy. Disaster recovery requires a copy outside that failure domain.
 
 TrueNAS-side infrastructure is intentionally managed separately from Flux.
-[`antief/truenas-infra`](https://github.com/antief/truenas-infra) owns the
-existing ACME OpenTofu configuration and is the selected future owner for
-verified stable NAS parents, intentionally static NFS exports, selected native
-protection tasks, and service identity/permission metadata. Not every TrueNAS
-resource belongs in OpenTofu. The official TrueNAS CSI driver retains sole
+[`AgenticHomelab/truenas-infra`](https://github.com/AgenticHomelab/truenas-infra)
+owns ACME and the adopted stable storage, protection and service identity
+resources. The official TrueNAS CSI driver retains sole
 lifecycle ownership of the child ZFS datasets and NFS exports it provisions
 for PVCs; never dual-manage them through TrueNAS OpenTofu. The CSI driver,
 StorageClasses and PVC manifests remain Flux-owned in this repository.

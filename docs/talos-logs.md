@@ -3,8 +3,10 @@
 Talos Alloy collects Pod logs from **only** the
 `metrics-server` and `kube-state-metrics` namespaces. The
 Talos/Flux unit owns the native Alloy components and RBAC;
-the [control-01 receiver](https://github.com/antief/oci-control-server/blob/main/docs/talos-logs-receiver.md)
+the [OCI Ansible receiver](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-logs-receiver.yml)
 owns TLS, Basic Auth, Nginx and local Loki ingestion.
+See the [private receiver runbook](https://github.com/antief/oci-control-server/blob/main/docs/talos-logs-receiver.md)
+for operational details.
 
 ## Current collection boundary
 

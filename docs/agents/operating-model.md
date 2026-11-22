@@ -1,13 +1,14 @@
 # Agent operating model
 
-This repository is Flux's Kubernetes desired-state source for
-`talos-home`; `antief/oci-control-server` owns control-01 host
-config, Hermes services, Omni runtime, native scheduling and OCI
-infrastructure. Three physical Talos nodes use local Longhorn NVMe;
-TrueNAS is a separate NAS and backup failure domain. Its selected stable
-infrastructure has its own canonical OpenTofu repository,
-[`antief/truenas-infra`](https://github.com/antief/truenas-infra).
-TrueNAS CSI still owns the PVC datasets and exports it creates.
+Flux uses this repository for Kubernetes desired state. The permanently private
+`AgenticHomelab/homelab-secrets` repository supplies private configuration, SOPS
+ciphertext and the Talos/Omni template and patches. Three physical Talos nodes
+use local Longhorn NVMe. TrueNAS is a separate NAS and backup failure domain.
+TrueNAS CSI owns the PVC datasets and exports it creates.
+
+The private `antief/oci-control-server` source owns Hermes fleet monitoring,
+administrative access preparation, Omni key renewal, TrueNAS OpenTofu access
+preparation and Renovate dispatch.
 
 ## Authorization and source of truth
 
@@ -22,11 +23,11 @@ and blanket merge privileges are excluded. Read
 
 | Owner | Persistent configuration |
 | --- | --- |
-| Flux | Kubernetes resources in `kubernetes/`, including SOPS-encrypted Secrets |
+| Flux | Kubernetes resources in `kubernetes/` and Secret delivery from the private source |
 | Omni | Talos lifecycle, machine identities, applied cluster template and encrypted etcd snapshots |
-| OCI OpenTofu (`antief/oci-control-server`) | OCI infrastructure, policies and Vault/IAM metadata |
-| TrueNAS OpenTofu (`antief/truenas-infra`) | Existing ACME root; selected future stable NAS datasets/exports, TrueNAS-side service identities and native policies, excluding CSI-created child resources |
-| Ansible | Persistent control-01 host services, native jobs and files |
+| OCI OpenTofu (`AgenticHomelab/oci-control-server`) | OCI infrastructure, policies and Vault/IAM metadata |
+| TrueNAS OpenTofu (`AgenticHomelab/truenas-infra`) | ACME, selected stable storage resources, service identities and native policies |
+| Normal OCI Ansible (`AgenticHomelab/oci-control-server`) | Persistent control-01 host configuration and services |
 | Native apps | Databases, media, mutable sessions, encryption material and recovery data |
 
 Ordinary assistant tasks remain read-only unless separately assigned
