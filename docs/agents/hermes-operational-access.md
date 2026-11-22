@@ -6,8 +6,8 @@ The exact runbook, machine/security identifiers, operator evidence and
 recovery prerequisites are retained in the
 [private owner document](https://github.com/AgenticHomelab/homelab-secrets/blob/main/docs/agents/hermes-operational-access.md).
 
-The original read-only administrator acceptance test is owned by
-[OCI control-server](https://github.com/antief/oci-control-server/blob/main/scripts/manual/hermes-diagnostics-acceptance.sh), with matching original Git blob and executable mode. It does not belong to this Flux repository.
+Use the [current private operations runbook](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-operational-workflow.md)
+for read-only administrator and host checks.
 
 All production operations still require their separately approved changes,
 current source review and verified live acceptance.

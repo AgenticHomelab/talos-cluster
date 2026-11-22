@@ -81,7 +81,5 @@ scoped kubelet API and its TLS exception.
 The public OCI Ansible source owns the
 [metrics receiver](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-metrics-receiver.yml)
 and [host observability configuration](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/observability.yml).
-Operational details remain in the private
-[receiver](https://github.com/antief/oci-control-server/blob/main/docs/talos-metrics-receiver.md)
-and [observability](https://github.com/antief/oci-control-server/blob/main/docs/observability-native-stack.md)
-runbooks.
+For the live host and receiver checks, see the
+[private control-host runbook](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/control-host-recovery.md#read-only-host-acceptance).

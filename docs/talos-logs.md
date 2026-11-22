@@ -5,7 +5,7 @@ Talos Alloy collects Pod logs from **only** the
 Talos/Flux unit owns the native Alloy components and RBAC;
 the [OCI Ansible receiver](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-logs-receiver.yml)
 owns TLS, Basic Auth, Nginx and local Loki ingestion.
-See the [private receiver runbook](https://github.com/antief/oci-control-server/blob/main/docs/talos-logs-receiver.md)
+See the [private receiver runbook](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/control-host-recovery.md#read-only-host-acceptance)
 for operational details.
 
 ## Current collection boundary
@@ -90,4 +90,4 @@ only native logging components, namespaced RBAC and the dedicated
 Secret; preserve all metrics components and WAL. OCI receiver
 rollback is separate and must not silently break metrics.
 See [Talos metrics](talos-metrics.md) and
-[control Loki operations](https://github.com/antief/oci-control-server/blob/main/docs/control-loki.md).
+[control-host operations](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/control-host-recovery.md#read-only-host-acceptance).
