@@ -21,8 +21,8 @@ TLS verification remains enabled with the normal public CA trust store;
 the verified ACME certificate needs no private CA ConfigMap or insecure TLS.
 
 The selected TrueNAS infrastructure OpenTofu repository
-[`antief/truenas-infra`](https://github.com/antief/truenas-infra) may manage
-stable parent datasets and the TrueNAS-side identity/privilege definitions
+[`AgenticHomelab/truenas-infra`](https://github.com/AgenticHomelab/truenas-infra)
+may manage stable parent datasets and the TrueNAS-side identity/privilege definitions
 after verified import. **Do not import CSI-created child datasets, their
 NFS shares or CSI-owned lifecycle resources into OpenTofu.** Stable static
 NAS exports and recovery snapshots have separate ownership and disposal

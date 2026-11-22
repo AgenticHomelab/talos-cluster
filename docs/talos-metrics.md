@@ -78,7 +78,10 @@ create an apparent green dashboard.
 remote-write authentication or WAL durability.
 [Resource metrics](kubelet-resource-metrics.md) describes the
 scoped kubelet API and its TLS exception.
-[Metrics receiver](https://github.com/antief/oci-control-server/blob/main/docs/talos-metrics-receiver.md)
-owns Nginx/credential rotation and host-side rollback.
-[OCI native observability](https://github.com/antief/oci-control-server/blob/main/docs/observability-native-stack.md)
-owns data retention, dashboards and independent host alerts.
+The public OCI Ansible source owns the
+[metrics receiver](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-metrics-receiver.yml)
+and [host observability configuration](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/observability.yml).
+Operational details remain in the private
+[receiver](https://github.com/antief/oci-control-server/blob/main/docs/talos-metrics-receiver.md)
+and [observability](https://github.com/antief/oci-control-server/blob/main/docs/observability-native-stack.md)
+runbooks.

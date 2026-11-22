@@ -23,12 +23,10 @@ event of type `renovate-nightly-merge` at 00:15 and 00:45 in each hour from
 GitHub Actions merger; no host-side PR selection or merge happens. GitHub's
 `pull_request_target` events still trigger it on Renovate PR activity.
 
-During the staged rollout the former GitHub `schedule` also remains enabled as
-a fallback, with sweeps requested every 15 minutes from 00:07 through 03:52.
-GitHub-hosted scheduled jobs may start hours late or be dropped. Once a real
-systemd timer firing and GitHub dispatch-to-workflow execution are verified,
-remove that fallback schedule in a separate reviewed change. Every workflow
-invocation checks Finland local time again; no merge starts at or after 04:00.
+The GitHub `schedule` also requests fallback sweeps every 15 minutes from
+00:07 through 03:52. GitHub-hosted scheduled jobs may start hours late or be
+dropped. Every workflow invocation checks Finland local time again. No merge
+starts at or after 04:00.
 A successful out-of-window job means no merge was attempted.
 
 The workflow uses the default-branch definition, never checks out or executes
@@ -47,8 +45,9 @@ eligible. Review actual changes and track Talos/Kubernetes version PRs in the
 ## CI and runtime boundaries
 
 The existing `Validate desired state / desired-state` offline check runs for
-Renovate-authored PRs as well as ordinary non-Markdown PRs. This catches
-rendering, dependency, exposure and policy regressions before the nightly merge.
+Renovate-authored PRs and other PRs, including documentation-only PRs. It
+catches rendering, dependency, exposure and policy regressions before the
+nightly merge.
 The same exact-head job and required-check enforcement apply to both types of
 PR; an incomplete, skipped or failed check is not passing validation. The
 nightly merger still uses the native GitHub API with normal branch protection
