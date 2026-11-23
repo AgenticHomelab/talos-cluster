@@ -61,7 +61,8 @@ spec:
               STAGED_UPDATES: "1"
 
               AUTO_BACKUP: "1"
-              AUTO_BACKUP_SCHEDULE: "*/15 * * * *"
+              # Eight world archives per day; Odin keeps three days on NAS.
+              AUTO_BACKUP_SCHEDULE: "0 */3 * * *"
               AUTO_BACKUP_REMOVE_OLD: "1"
               AUTO_BACKUP_DAYS_TO_LIVE: "3"
               AUTO_BACKUP_ON_UPDATE: "1"
