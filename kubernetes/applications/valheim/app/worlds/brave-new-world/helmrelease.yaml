@@ -124,20 +124,16 @@ spec:
       saves:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 10Gi
-        retain: true
+        # Adopt the accepted recovery world in place, including subsequent saves.
+        existingClaim: valheim2-playtest55-saves3122
         globalMounts:
           - path: /home/steam/.config/unity3d/IronGate/Valheim
 
       server:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 30Gi
-        retain: true
+        # Keep the verified clean installation; never remount the retired disk.
+        existingClaim: valheim2-playtest55-server
         globalMounts:
           - path: /home/steam/valheim
 
