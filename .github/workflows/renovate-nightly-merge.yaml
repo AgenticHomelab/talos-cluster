@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      checks: read
       contents: write
       pull-requests: read
     steps:
@@ -90,11 +91,38 @@ jobs:
                 esac
               fi
 
-              body="$(gh api "repos/$GH_REPO/pulls/$number" --jq '.body // ""')"
+              pr="$(gh api "repos/$GH_REPO/pulls/$number")"
+              body="$(jq -r '.body // ""' <<< "$pr")"
               if grep -Eq 'siderolabs/talos|kubernetes/kubernetes' <<< "$body"; then
                 echo "Skipping #$number: Talos/Kubernetes version update."
                 continue
               fi
+
+              # A rebase starts a new desired-state run. Do not race the required check.
+              checks="$(gh api "repos/$GH_REPO/commits/$head_sha/check-runs?check_name=desired-state&filter=latest&per_page=100")"
+              if ! jq -e --arg sha "$head_sha" '
+                any(.check_runs[]?;
+                  .name == "desired-state" and
+                  .head_sha == $sha and
+                  .status == "completed" and
+                  .conclusion == "success" and
+                  .app.slug == "github-actions"
+                )
+              ' <<< "$checks" >/dev/null; then
+                echo "Deferring #$number: exact-head desired-state has not succeeded."
+                continue
+              fi
+
+              # "unstable" includes failed non-required checks (e.g. an earlier
+              # merger run). GitHub still enforces every required check on PUT.
+              mergeable_state="$(jq -r '.mergeable_state // "unknown"' <<< "$pr")"
+              case "$mergeable_state" in
+                clean|unstable) ;;
+                *)
+                  echo "Deferring #$number: GitHub mergeable_state=$mergeable_state."
+                  continue
+                  ;;
+              esac
 
               in_window || exit "$failed"
               if result="$(gh api -X PUT "repos/$GH_REPO/pulls/$number/merge" \
@@ -103,6 +131,13 @@ jobs:
                 merged=1
                 break
               else
+                # Native protection can change between preflight and merge.
+                if [[ "$result" == *'HTTP 405'* ]] &&
+                   [[ "$result" == *'Required status check'* ||
+                      "$result" == *'Pull Request is not mergeable'* ]]; then
+                  echo "Deferring #$number: GitHub merge protection is not ready: $result"
+                  continue
+                fi
                 echo "::warning::Merge failed for PR #$number: $result"
                 failed=1
                 failed_numbers+="$number"$'\n'

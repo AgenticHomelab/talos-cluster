@@ -44,7 +44,7 @@ yq -o=json '.' "$repo_root/.github/workflows/renovate-nightly-merge.yaml" | jq -
   .permissions == {} and
   (.jobs.merge.if | contains("vars.RENOVATE_NIGHTLY_MERGE_ENABLED == \u0027true\u0027")) and
   (.jobs.merge.if | contains("github.event.pull_request.head.repo.full_name == github.repository")) and
-  .jobs.merge.permissions == {"contents":"write","pull-requests":"read"} and
+  .jobs.merge.permissions == {"checks":"read","contents":"write","pull-requests":"read"} and
   .jobs.merge["timeout-minutes"] == 5 and
   (.jobs.merge.steps | length) == 1 and
   (.jobs.merge.steps[0].run | contains("TZ=Europe/Helsinki date +%H")) and
@@ -52,6 +52,13 @@ yq -o=json '.' "$repo_root/.github/workflows/renovate-nightly-merge.yaml" | jq -
   (.jobs.merge.steps[0].run | contains("00|01")) and
   (.jobs.merge.steps[0].run | contains(".user.login == \"renovate[bot]\"")) and
   (.jobs.merge.steps[0].run | contains("siderolabs/talos|kubernetes/kubernetes")) and
+  (.jobs.merge.steps[0].run | contains("check-runs?check_name=desired-state&filter=latest")) and
+  (.jobs.merge.steps[0].run | contains(".head_sha == $sha")) and
+  (.jobs.merge.steps[0].run | contains(".conclusion == \"success\"")) and
+  (.jobs.merge.steps[0].run | contains(".app.slug == \"github-actions\"")) and
+  (.jobs.merge.steps[0].run | contains("case \"$mergeable_state\" in")) and
+  (.jobs.merge.steps[0].run | contains("clean|unstable)")) and
+  (.jobs.merge.steps[0].run | contains("Deferring #$number: exact-head desired-state")) and
   (.jobs.merge.steps[0].run | contains("gh api -X PUT")) and
   (.jobs.merge.steps[0].run | contains("-f sha=\"$head_sha\" -f merge_method=squash")) and
   ([.jobs.merge.steps[].uses // empty] | length) == 0
