@@ -37,9 +37,13 @@ selects open, non-draft `renovate[bot]` PRs with a same-repository
 earlier window. It attempts real GitHub API merges with an exact PR-head SHA,
 then refreshes the queue after each successful merge. Before attempting a
 merge it confirms the GitHub Actions `desired-state` check completed successfully
-for the exact current PR head, and that GitHub considers the PR cleanly mergeable.
-Missing, queued, running or failed checks and temporarily blocked merges are
-deferred to later scheduled/dispatch runs, not reported as merger failures.
+for the exact current PR head, and that GitHub does not report conflicts,
+a pending mergeability calculation or a required rebase. A prior failed
+non-required `merge` check may set `mergeable_state=unstable`; this is allowed
+to proceed to GitHub's native protection check rather than blocking forever.
+Missing, queued, running or failed required checks and temporarily blocked
+merges are deferred to later scheduled/dispatch runs, not reported as merger
+failures.
 Unexpected API or merge errors still fail the workflow. Normal GitHub
 protection is never bypassed.
 
