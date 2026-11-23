@@ -56,7 +56,8 @@ yq -o=json '.' "$repo_root/.github/workflows/renovate-nightly-merge.yaml" | jq -
   (.jobs.merge.steps[0].run | contains(".head_sha == $sha")) and
   (.jobs.merge.steps[0].run | contains(".conclusion == \"success\"")) and
   (.jobs.merge.steps[0].run | contains(".app.slug == \"github-actions\"")) and
-  (.jobs.merge.steps[0].run | contains("mergeable_state")) and
+  (.jobs.merge.steps[0].run | contains("case \"$mergeable_state\" in")) and
+  (.jobs.merge.steps[0].run | contains("clean|unstable)")) and
   (.jobs.merge.steps[0].run | contains("Deferring #$number: exact-head desired-state")) and
   (.jobs.merge.steps[0].run | contains("gh api -X PUT")) and
   (.jobs.merge.steps[0].run | contains("-f sha=\"$head_sha\" -f merge_method=squash")) and
