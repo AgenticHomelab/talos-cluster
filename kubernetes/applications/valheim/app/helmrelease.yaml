@@ -42,7 +42,7 @@ spec:
           main:
             image:
               repository: mbround18/valheim
-              tag: 3.8.12
+              tag: 3.8.13
               pullPolicy: IfNotPresent
 
             env:
