@@ -136,7 +136,8 @@ spec:
         type: persistentVolumeClaim
         storageClass: longhorn
         accessMode: ReadWriteOnce
-        size: 30Gi
+        # Staged updates retain install rollback copies on this volume.
+        size: 50Gi
         retain: true
         globalMounts:
           - path: /home/steam/valheim
