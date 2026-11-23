@@ -113,12 +113,16 @@ jobs:
                 continue
               fi
 
-              # GitHub may still be computing mergeability or require a rebase.
+              # "unstable" includes failed non-required checks (e.g. an earlier
+              # merger run). GitHub still enforces every required check on PUT.
               mergeable_state="$(jq -r '.mergeable_state // "unknown"' <<< "$pr")"
-              if [[ "$mergeable_state" != "clean" ]]; then
-                echo "Deferring #$number: GitHub mergeable_state=$mergeable_state."
-                continue
-              fi
+              case "$mergeable_state" in
+                clean|unstable) ;;
+                *)
+                  echo "Deferring #$number: GitHub mergeable_state=$mergeable_state."
+                  continue
+                  ;;
+              esac
 
               in_window || exit "$failed"
               if result="$(gh api -X PUT "repos/$GH_REPO/pulls/$number/merge" \
