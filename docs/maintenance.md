@@ -41,11 +41,10 @@ The **three-day policy applies only to world archives**, not to the
 installation rollback copies. In the pinned Odin 3.8.12 source,
 `STAGED_UPDATES=1` promotes new installations and retains timestamped
 copies under `/home/steam/valheim/.odin/rollback` without a native
-retention configuration. The primary's November 2026 disk-full incident
-was caused by ~24.2 GiB of this history and ~3.1 GiB of a separate
-legacy installation directory; its world-save PVC used ~0.34 GiB.
-Changing the application backup schedule or TTL will not free the
-server-installation volume. Keep staged-update validation enabled;
+retention configuration. A prior full-installation-PVC incident was caused by accumulated
+rollback generations and a legacy installation directory, not by
+growing world-save data. Changing the application backup schedule
+or TTL will not free the server-installation volume. Keep staged-update validation enabled;
 do not add an unreviewed cleanup CronJob or switch off update safety
 to solve retention.
 
