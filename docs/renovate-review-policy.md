@@ -35,8 +35,13 @@ selects open, non-draft `renovate[bot]` PRs with a same-repository
 `renovate/` branch and `dependencies` label. It excludes PR descriptions identifying `siderolabs/talos` or
 `kubernetes/kubernetes` upgrades. Longhorn PRs are restricted to the
 earlier window. It attempts real GitHub API merges with an exact PR-head SHA,
-then refreshes the queue after each successful merge. A blocked merge is logged
-as an Actions warning/failure; normal GitHub protection is never bypassed.
+then refreshes the queue after each successful merge. Before attempting a
+merge it confirms the GitHub Actions `desired-state` check completed successfully
+for the exact current PR head, and that GitHub considers the PR cleanly mergeable.
+Missing, queued, running or failed checks and temporarily blocked merges are
+deferred to later scheduled/dispatch runs, not reported as merger failures.
+Unexpected API or merge errors still fail the workflow. Normal GitHub
+protection is never bypassed.
 
 A mixed update containing excluded Talos/Kubernetes version changes is not
 eligible. Review actual changes and track Talos/Kubernetes version PRs in the
