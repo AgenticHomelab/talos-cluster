@@ -136,14 +136,7 @@ jobs:
                 fi
                 echo "::warning::Merge failed for PR #$number: $result"
                 failed=1
-                failed_numbers+="$number"            done <<< "$candidates"
-
-            if [[ "$merged" -eq 0 ]]; then
-              break
-            fi
-          done
-          exit "$failed"
-\n'
+                failed_numbers+="$number"$'\n'
               fi
             done <<< "$candidates"
 
