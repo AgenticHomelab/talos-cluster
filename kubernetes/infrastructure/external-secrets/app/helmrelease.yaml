@@ -1,0 +1,30 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-secrets
+  namespace: external-secrets
+spec:
+  interval: 30m
+  chart:
+    spec:
+      # renovate: datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
+      chart: external-secrets
+      version: "2.15.0"
+      sourceRef:
+        kind: HelmRepository
+        name: external-secrets
+        namespace: flux-system
+  values:
+    installCRDs: true
+    # Pull-only Vault delivery; no provider writes or workload token minting.
+    processPushSecret: false
+    processClusterPushSecret: false
+    crds:
+      createPushSecret: false
+      createClusterPushSecret: false
+    rbac:
+      serviceAccountTokenCreate: false
+    livenessProbe:
+      enabled: true
+    readinessProbe:
+      enabled: true

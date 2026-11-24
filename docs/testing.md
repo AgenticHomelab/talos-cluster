@@ -15,16 +15,18 @@ Helm, kubectl (local Kustomize only), Flux CLI, plus envsubst and standard Linux
 binaries and checks their SHA-256 sums. No Python framework or packages are
 required. Use a clean checkout and an empty HOME without kubeconfigs or keys.
 
-Download the four exact chart versions declared by Git first:
+Download the five exact chart versions declared by Git first:
 
 ```sh
 chart_dir=$(mktemp -d)
-for entry in "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
+for entry in "infrastructure external-secrets" "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
   read -r unit_category unit <<<"$entry"
   version=$(yq -r '.spec.chart.spec.version' "kubernetes/$unit_category/$unit/app/helmrelease.yaml")
   repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
   helm pull "$unit" --repo "$repository" --version "$version" --destination "$chart_dir"
 done
+(cd "$chart_dir" && sha256sum --check \
+  "$OLDPWD/kubernetes/infrastructure/external-secrets/upstream.sha256")
 HELM_KUBERNETES_VERSION=v1.37.2 HELM_CHARTS_DIR="$chart_dir" ./scripts/validate-complete-desired-state.sh
 rm -r "$chart_dir"
 ```
@@ -35,7 +37,12 @@ release/namespace and the CI-pinned Kubernetes compatibility fixture. This
 fixture is a rendering target, not an authority for Talos/Kubernetes upgrades. Missing archives, missing
 renders or tool errors fail; chart security checks are no longer opt-in. No
 Secret is decrypted. Archive versions come from the manifests, so a Renovate
-upgrade does not require editing duplicate version assertions.
+upgrade does not require editing duplicate version assertions. ESO additionally
+requires the reviewed archive hash in
+`kubernetes/infrastructure/external-secrets/upstream.sha256`; chart updates must
+review that hash alongside the version. Its [foundation staging](external-secrets.md)
+tests validate controller/store wiring and the exact chart's v1 Oracle schema
+without private config, provider credentials or a live API.
 
 The gate runs all retained `scripts/tests/*-test.sh` programs and standard
 `unittest discover` for `test_*.py`. It also validates registry/Flux dependencies,

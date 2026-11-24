@@ -146,7 +146,7 @@ jobs:
           set -euo pipefail
           chart_dir="$RUNNER_TEMP/charts"
           mkdir -p "$chart_dir"
-          for entry in "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
+          for entry in "infrastructure external-secrets" "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
             read -r unit_category unit <<<"$entry"
             version=$(yq -r '.spec.chart.spec.version' "kubernetes/$unit_category/$unit/app/helmrelease.yaml")
             repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
@@ -155,6 +155,8 @@ jobs:
           printf '%s  %s\n' \
             "$TRUENAS_CSI_CHART_SHA256" \
             "$chart_dir/truenas-csi-1.4.0.tgz" | sha256sum --check --status
+          (cd "$chart_dir" && sha256sum --check \
+            "$GITHUB_WORKSPACE/kubernetes/infrastructure/external-secrets/upstream.sha256")
 
       - name: Validate complete desired state
         shell: bash

@@ -71,7 +71,12 @@ while IFS= read -r path; do
     echo "Flux Kustomization path does not exist: $path" >&2
     exit 1
   fi
-done < <(yq -r 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/v1") | .spec.path' "$apps_render" | rg -v '^---$' | sort -u)
+done < <(yq -r '
+  select(.apiVersion == "kustomize.toolkit.fluxcd.io/v1" and
+    .spec.sourceRef.kind == "GitRepository" and .spec.sourceRef.name == "flux-system") |
+  .spec.path
+' "$apps_render" | rg -v '^---$' | sort -u)
+# homelab-secrets paths are validated by private-source CI, not this checkout.
 
 kustomization_names=$(yq -r 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/v1") | .metadata.name' "$apps_render" | rg -v '^---$' | sort -u)
 # Unit dependencies may target cluster-level Flux Kustomizations, too.

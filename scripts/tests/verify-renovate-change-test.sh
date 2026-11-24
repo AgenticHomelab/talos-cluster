@@ -37,6 +37,39 @@ grep -qx 'unit=metallb' <<<"$metallb_plan"
 grep -qx 'flux-kustomization=metallb' <<<"$metallb_plan"
 grep -qx 'flux-kustomization=metallb-config' <<<"$metallb_plan"
 
+eso_plan="$(bash "$verifier" \
+  --revision "$revision" \
+  --changed-file kubernetes/infrastructure/external-secrets/app/helmrelease.yaml \
+  --plan-only)"
+grep -qx 'verification-class=flux-unit' <<<"$eso_plan"
+grep -qx 'flux-kustomization=external-secrets' <<<"$eso_plan"
+grep -qx 'flux-kustomization=external-secrets-config' <<<"$eso_plan"
+grep -qx 'helm-release=external-secrets/external-secrets' <<<"$eso_plan"
+
+# The private store exception must not weaken existing SOPS delivery or accept
+# another private config owner merely because its filename resembles ESO.
+fixture="$tmpdir/repository"
+mkdir -p "$fixture"
+cp -R "$repo_root/scripts" "$repo_root/kubernetes" "$fixture/"
+fixture_verifier="$fixture/scripts/automation/verify-renovate-change.sh"
+yq -i 'del(.spec.decryption)' "$fixture/kubernetes/applications/valheim/secrets-ks.yaml"
+if bash "$fixture_verifier" --revision "$revision" \
+  --changed-file kubernetes/applications/valheim/app/helmrelease.yaml \
+  --plan-only >"$tmpdir/private-owner-result" 2>&1; then
+  echo 'Existing private Secret owners must retain SOPS decryption.' >&2
+  exit 1
+fi
+rg -q 'must be a SOPS-decrypting secrets unit' "$tmpdir/private-owner-result"
+yq -i '.metadata.name = "unapproved-private-config"' \
+  "$fixture/kubernetes/infrastructure/external-secrets/config-ks.yaml"
+if bash "$fixture_verifier" --revision "$revision" \
+  --changed-file kubernetes/infrastructure/external-secrets/app/helmrelease.yaml \
+  --plan-only >"$tmpdir/private-owner-result" 2>&1; then
+  echo 'The ESO private metadata exception must match its exact owner.' >&2
+  exit 1
+fi
+rg -q 'must be a SOPS-decrypting secrets unit' "$tmpdir/private-owner-result"
+
 repo_plan="$(bash "$verifier" \
   --revision "$revision" \
   --changed-file .github/workflows/validate-desired-state.yaml \

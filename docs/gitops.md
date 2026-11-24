@@ -88,6 +88,11 @@ substitution of Secret-backed process environment variables. Offline tests subst
 actual configured hostnames and dependent routes must remain unchanged on cutover.
 A Ready source and successful offline rendering do not alone prove runtime acceptance.
 
+The [External Secrets foundation](external-secrets.md) adds a controller/CRD unit
+and a separately gated `ClusterSecretStore/oci-vault` config owner from private
+Git. This is initial staging only: the existing 15 SOPS Secret owners and
+consumer dependencies are unchanged, and no delivery cutover is implied.
+
 Bootstrap age private keys and Git deploy credentials are kept
 outside Git. Private ciphertext does not by itself establish a
 recoverable backup. Never replace encrypted manifests with

@@ -113,10 +113,15 @@ helm_template_unit() {
   version=$(yq -r '.spec.chart.spec.version' "$release")
   chart="$HELM_CHARTS_DIR/$unit-$version.tgz"
   [[ -f "$chart" ]] || { echo "Required chart missing: $chart" >&2; exit 1; }
+  if [[ "$unit" == external-secrets ]]; then
+    (cd "$HELM_CHARTS_DIR" && sha256sum --check "$repo_root/kubernetes/infrastructure/external-secrets/upstream.sha256")
+  fi
   yq '.spec.values' "$release" > "$render_directory/$unit-values.yaml"
   helm template "$unit" "$chart" --namespace "$unit" --kube-version "$kubernetes_version" \
     --values "$render_directory/$unit-values.yaml" > "$render_directory/$unit.yaml"
 }
+# Verify the new provider package before rendering any chart.
+helm_template_unit external-secrets "infrastructure"
 helm_template_unit traefik "infrastructure"
 helm_template_unit truenas-csi "infrastructure"
 helm_template_unit alloy "observability"
@@ -146,6 +151,7 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v
 for test_file in scripts/tests/*-test.sh; do
   echo "=== Shell test: $test_file ==="
   case "$test_file" in
+    */external-secrets-chart-test.sh) bash "$test_file" "$render_directory/external-secrets.yaml" ;;
     */truenas-csi-pilot-test.sh) bash "$test_file" "$render_directory/truenas-csi.yaml" ;;
     */public-ingress-boundary-test.sh) bash "$test_file" "$render_directory/traefik.yaml" ;;
     */talos-metrics-test.sh) bash "$test_file" "$render_directory/alloy.yaml" "$render_directory/kube-state-metrics.yaml" ;;

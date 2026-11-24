@@ -1,0 +1,32 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets-config
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/external-secrets/config
+  prune: true
+  wait: true
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: homelab-secrets
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: homelab-private-vars
+  dependsOn:
+    - name: homelab-private-config
+    - name: external-secrets
+  healthChecks:
+    - apiVersion: external-secrets.io/v1
+      kind: ClusterSecretStore
+      name: oci-vault
+  # wait checks every private config object; this expression also gates the
+  # store on the provider's Ready condition, not just successful CR application.
+  healthCheckExprs:
+    - apiVersion: external-secrets.io/v1
+      kind: ClusterSecretStore
+      current: "has(status.conditions) && status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')"

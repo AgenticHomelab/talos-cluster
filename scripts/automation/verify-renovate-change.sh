@@ -185,11 +185,19 @@ collect_unit_targets() {
         return 1
       }
       if [[ "$source_name" == homelab-secrets ]]; then
-        [[ "$name" == *-secrets && "$decryption_provider" == sops &&
-           "$decryption_secret" == sops-age ]] || {
-          echo "Private Git Kustomization $name must be a SOPS-decrypting secrets unit" >&2
-          return 1
-        }
+        # The ESO store is private metadata, not a replacement Secret owner.
+        # Keep the existing decryption contract for every other private unit.
+        if [[ "$unit" == infrastructure/external-secrets &&
+              "$name" == external-secrets-config &&
+              "$target_path" == ./kubernetes/infrastructure/external-secrets/config ]]; then
+          :
+        else
+          [[ "$name" == *-secrets && "$decryption_provider" == sops &&
+             "$decryption_secret" == sops-age ]] || {
+            echo "Private Git Kustomization $name must be a SOPS-decrypting secrets unit" >&2
+            return 1
+          }
+        fi
       fi
       [[ "$target_path" == "./kubernetes/$unit/"* ]] || {
         echo "Flux Kustomization $name escapes reconciliation unit $unit: $target_path" >&2
