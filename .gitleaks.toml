@@ -1,0 +1,20 @@
+# Keep the upstream credential rules; only exempt reviewed OCI Vault names.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+    [[rules.allowlists]]
+    description = "Reviewed OCI Vault resource name, not credential material"
+    condition = "AND"
+    regexTarget = "line"
+    paths = ['''^(\./)?kubernetes/applications/valheim/app/externalsecret\.yaml$''']
+    regexes = ['''^[ \t]*key: k8s-valheim-valheim-secret[ \t]*$''']
+
+    [[rules.allowlists]]
+    description = "Reviewed OCI Vault resource name, not credential material"
+    condition = "AND"
+    regexTarget = "line"
+    paths = ['''^(\./)?kubernetes/infrastructure/truenas-csi/app/externalsecret\.yaml$''']
+    regexes = ['''^[ \t]*key: k8s-truenas-csi-truenas-csi-api[ \t]*$''']
