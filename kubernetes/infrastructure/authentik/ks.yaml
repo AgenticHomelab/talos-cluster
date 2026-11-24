@@ -19,7 +19,7 @@ spec:
         name: homelab-private-vars
   dependsOn:
     - name: homelab-private-config
-    - name: authentik-secrets
+    - name: external-secrets-config
     - name: barman-cloud
     - name: longhorn
     - name: cloudnative-pg

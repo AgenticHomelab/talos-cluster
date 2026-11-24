@@ -41,8 +41,7 @@ Talos machine configuration, node-specific patches, and its validation tools liv
 The physical TrueNAS server's selected stable NAS infrastructure and
 TrueNAS-side service identities belong to `AgenticHomelab/truenas-infra` OpenTofu.
 The official TrueNAS CSI driver owns the PVC-specific child datasets and NFS
-exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and SOPS
-Secret delivery remain Flux-owned here. OCI Vault is the intended canonical
+exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and ExternalSecret delivery remain Flux-owned here. OCI Vault is the intended canonical
 source for stable project-managed TrueNAS API-key values; a currently deployed
 SOPS Secret is a consumer copy, not proof of completed Vault adoption. Do not
 change live credentials or claim a migration from documentation alone.
@@ -107,17 +106,19 @@ Established dependency patterns include:
 
 Use a separate `config-ks.yaml` and nested `config/` directory for resources that require controller CRDs or readiness. Do not remove or weaken dependencies merely to make reconciliation appear faster.
 
-## Secrets and SOPS
+## Secrets and OCI Vault
 
-Kubernetes secrets committed to Git must be SOPS-encrypted and named `*.sops.yaml`.
+Stable runtime credentials are stored in OCI Vault and delivered through
+app-local ExternalSecrets using the shared `oci-vault` ClusterSecretStore.
+Depend on `external-secrets-config` for initial readiness. Preserve target
+names, keys, types and consumer metadata. Use periodic synchronization with
+`creationPolicy: Orphan` and `deletionPolicy: Retain`; explicitly review
+cleanup when retiring a Secret in a surviving namespace.
 
-- Follow the repository's `.sops.yaml` creation rules.
-- Include encrypted manifests through the appropriate nested Kustomize resource list.
-- Ensure the owning Flux Kustomization has SOPS decryption configured with the `sops-age` secret.
-- Do not edit encrypted SOPS values manually; use SOPS tooling when an explicitly requested secret change is necessary.
-- Never replace encrypted values with plaintext placeholders in a committed manifest.
-- Do not decrypt secrets for inspection unless the user explicitly requests it and the task requires it.
-- Do not expose decrypted values in logs, diffs, comments, or responses.
+- Never commit plaintext credentials or decrypted values.
+- Do not edit or decrypt retained historical SOPS ciphertext without explicit authorization.
+- Keep independent bootstrap credentials and recovery identities outside Git.
+- Application-owned mutable Secrets stay application-owned.
 
 Local Talos secrets, generated machine configuration, kubeconfigs, talosconfigs, AGE private keys, and etcd snapshots must remain untracked.
 
