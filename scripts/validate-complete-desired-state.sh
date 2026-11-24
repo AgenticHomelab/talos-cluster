@@ -117,6 +117,7 @@ helm_template_unit() {
   helm template "$unit" "$chart" --namespace "$unit" --kube-version "$kubernetes_version" \
     --values "$render_directory/$unit-values.yaml" > "$render_directory/$unit.yaml"
 }
+helm_template_unit external-secrets "infrastructure"
 helm_template_unit traefik "infrastructure"
 helm_template_unit truenas-csi "infrastructure"
 helm_template_unit alloy "observability"
