@@ -4,7 +4,7 @@ trap 'echo "FAIL: TrueNAS CSI desired-state contract at line $LINENO" >&2' ERR
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 release="$repo_root/kubernetes/infrastructure/truenas-csi/app/helmrelease.yaml"
-rendered="${1:?usage: truenas-csi-pilot-test.sh RENDERED_HELM_OUTPUT}"
+rendered="${1:?usage: truenas-csi-storage-test.sh RENDERED_HELM_OUTPUT}"
 
 yq -e '
   .spec.suspend != true and
@@ -17,52 +17,8 @@ yq -e '
   .spec.values.volumeSnapshotClass.enabled == false
 ' "$release" >/dev/null
 
-# Compare the exact transitional contracts. Keep the legacy classes until
-# retained volumes have been rebound and pilot resources retired.
+# Compare the exact supported non-default StorageClass contracts.
 if ! yq -o=json '.spec.values.storageClasses' "$release" | jq -e '. == [
-  {
-    "name": "truenas-csi-pilot-delete",
-    "isDefault": false,
-    "reclaimPolicy": "Delete",
-    "allowVolumeExpansion": true,
-    "volumeBindingMode": "Immediate",
-    "mountOptions": ["hard", "nfsvers=4.1"],
-    "parameters": {
-      "protocol": "nfs",
-      "datasetPath": "k8s/csi-pilot/delete",
-      "compression": "LZ4",
-      "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
-    }
-  },
-  {
-    "name": "truenas-csi-pilot-retain",
-    "isDefault": false,
-    "reclaimPolicy": "Retain",
-    "allowVolumeExpansion": true,
-    "volumeBindingMode": "Immediate",
-    "mountOptions": ["hard", "nfsvers=4.1"],
-    "parameters": {
-      "protocol": "nfs",
-      "datasetPath": "k8s/csi-pilot/retain",
-      "compression": "LZ4",
-      "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
-    }
-  },
-  {
-    "name": "truenas-csi-production-retain",
-    "isDefault": false,
-    "reclaimPolicy": "Retain",
-    "allowVolumeExpansion": true,
-    "volumeBindingMode": "Immediate",
-    "mountOptions": ["hard", "nfsvers=4.1", "sec=sys"],
-    "parameters": {
-      "protocol": "nfs",
-      "datasetPath": "k8s/csi",
-      "compression": "LZ4",
-      "nfs.rootSquash": "false",
-      "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
-    }
-  },
   {
     "name": "truenas-csi-retain",
     "isDefault": false,
@@ -94,7 +50,7 @@ if ! yq -o=json '.spec.values.storageClasses' "$release" | jq -e '. == [
     }
   }
 ]' >/dev/null; then
-  echo "Source CSI StorageClasses differ from the exact approved transitional contracts." >&2
+  echo "Source CSI StorageClasses differ from the exact approved supported contracts." >&2
   exit 1
 fi
 
@@ -123,7 +79,7 @@ if rg -q 'existingCABundleConfigMap|caBundle:' "$release"; then
   exit 1
 fi
 
-expected=$'truenas-csi-delete\tDelete\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
+expected=$'truenas-csi-delete\tDelete\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
 actual="$(yq -r '
   select(.kind == "StorageClass") |
   [.metadata.name, .reclaimPolicy,
@@ -131,29 +87,25 @@ actual="$(yq -r '
    .parameters.datasetPath, (.mountOptions | join(","))] | @tsv
 ' "$rendered" | rg -v '^(---)?$' | sort)"
 if [[ "$actual" != "$expected" ]]; then
-  echo "Rendered StorageClasses do not match the approved transitional contracts." >&2
+  echo "Rendered StorageClasses do not match the approved supported contracts." >&2
   exit 1
 fi
 
-if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | rg -v '^(---)?$' | wc -l)" -ne 5 ]]; then
-  echo "Expected three legacy classes and two new classes." >&2
+if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | rg -v '^(---)?$' | wc -l)" -ne 2 ]]; then
+  echo "Expected exactly two TrueNAS CSI classes." >&2
   exit 1
 fi
 
 # Check the rendered provisioner, binding, expansion and NFS parameters.
 yq -o=json 'select(.kind == "StorageClass")' "$rendered" | jq -se '
-  length == 5 and all(.[];
+  length == 2 and all(.[];
     .provisioner == "csi.truenas.io" and
     .volumeBindingMode == "Immediate" and
     .allowVolumeExpansion == true and
     .parameters.protocol == "nfs" and
     .parameters.compression == "LZ4" and
     .parameters["nfs.hosts"] == "${TRUENAS_NFS_CLIENT_HOSTS}" and
-    (if (.metadata.name == "truenas-csi-delete" or
-         .metadata.name == "truenas-csi-retain" or
-         .metadata.name == "truenas-csi-production-retain")
-     then .parameters["nfs.rootSquash"] == "false"
-     else true end))
+    .parameters["nfs.rootSquash"] == "false")
 ' >/dev/null
 
 if rg -q '^kind: Secret$' "$rendered"; then
@@ -167,4 +119,4 @@ if [[ "$driver_names" != "csi.truenas.io" ]]; then
   exit 1
 fi
 
-echo "PASS: TrueNAS CSI transitional classes preserve TLS, ESO, non-default reclaim policies and NFS boundaries."
+echo "PASS: TrueNAS CSI storage classes preserve TLS, ESO, non-default reclaim policies and NFS boundaries."

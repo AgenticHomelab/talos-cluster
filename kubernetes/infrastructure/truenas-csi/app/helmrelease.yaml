@@ -54,47 +54,6 @@ spec:
     volumeSnapshotClass:
       enabled: false
     storageClasses:
-      - name: truenas-csi-pilot-delete
-        isDefault: false
-        reclaimPolicy: Delete
-        allowVolumeExpansion: true
-        volumeBindingMode: Immediate
-        mountOptions:
-          - hard
-          - nfsvers=4.1
-        parameters:
-          protocol: nfs
-          datasetPath: k8s/csi-pilot/delete
-          compression: LZ4
-          nfs.hosts: ${TRUENAS_NFS_CLIENT_HOSTS}
-      - name: truenas-csi-pilot-retain
-        isDefault: false
-        reclaimPolicy: Retain
-        allowVolumeExpansion: true
-        volumeBindingMode: Immediate
-        mountOptions:
-          - hard
-          - nfsvers=4.1
-        parameters:
-          protocol: nfs
-          datasetPath: k8s/csi-pilot/retain
-          compression: LZ4
-          nfs.hosts: ${TRUENAS_NFS_CLIENT_HOSTS}
-      - name: truenas-csi-production-retain
-        isDefault: false
-        reclaimPolicy: Retain
-        allowVolumeExpansion: true
-        volumeBindingMode: Immediate
-        mountOptions:
-          - hard
-          - nfsvers=4.1
-          - sec=sys
-        parameters:
-          protocol: nfs
-          datasetPath: k8s/csi
-          compression: LZ4
-          nfs.rootSquash: "false"
-          nfs.hosts: ${TRUENAS_NFS_CLIENT_HOSTS}
       - name: truenas-csi-retain
         isDefault: false
         reclaimPolicy: Retain

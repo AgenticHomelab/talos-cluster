@@ -26,7 +26,7 @@ Each database instance uses a Longhorn PVC (declared 30 GiB), while ML cache
 not backups and PostgreSQL failover does not guarantee zero data loss.
 
 The server mounts `immich/immich-media-truenas`, a RWX TrueNAS CSI claim,
-at `/data`. Its declared StorageClass is `truenas-csi-production-retain`;
+at `/data`. Its declared StorageClass is `truenas-csi-retain`;
 preserve its `Retain` lifecycle and Flux prune-disabled protection.
 The accepted 2026-11-17 mount used NFSv4.1 `sec=sys,hard`, numeric
 UID/GID `1000:1000`, and root mode `0750`. The CSI-owned child dataset
