@@ -15,5 +15,12 @@ targetRules = ["generic-api-key"]
 description = "Reviewed TrueNAS CSI OCI Vault reference"
 condition = "AND"
 regexTarget = "secret"
-paths = ['''(^|/)kubernetes/infrastructure/truenas-csi/app/externalsecret\.yaml$''']
+paths = [
+    '''(^|/)kubernetes/infrastructure/truenas-csi/app/externalsecret\.yaml
+regexes = ['''^k8s-truenas-csi-truenas-csi-api$''']
+'',
+    '''(^|/)scripts/tests/truenas-csi-pilot-test\.sh
+regexes = ['''^k8s-truenas-csi-truenas-csi-api$''']
+'',
+]
 regexes = ['''^k8s-truenas-csi-truenas-csi-api$''']
