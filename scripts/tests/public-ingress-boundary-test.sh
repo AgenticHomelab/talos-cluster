@@ -64,8 +64,6 @@ def walk(value):
 
 
 for path in apps.rglob("*.yaml"):
-    if path.name.endswith(".sops.yaml"):
-        continue
     rendered = subprocess.run(
         ["yq", "eval-all", "-o=json", "-I=0", ".", str(path)],
         check=True,
