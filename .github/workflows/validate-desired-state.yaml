@@ -146,7 +146,7 @@ jobs:
           set -euo pipefail
           chart_dir="$RUNNER_TEMP/charts"
           mkdir -p "$chart_dir"
-          for entry in "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
+          for entry in "infrastructure external-secrets" "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
             read -r unit_category unit <<<"$entry"
             version=$(yq -r '.spec.chart.spec.version' "kubernetes/$unit_category/$unit/app/helmrelease.yaml")
             repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
