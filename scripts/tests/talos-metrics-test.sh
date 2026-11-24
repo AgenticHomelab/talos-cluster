@@ -12,12 +12,12 @@ for entry in "observability alloy" "observability kube-state-metrics"; do
   yq -e '.spec.suspend == false' "kubernetes/$unit_category/$unit/ks.yaml" >/dev/null
   yq -e '.spec.suspend == false' "kubernetes/$unit_category/$unit/app/helmrelease.yaml" >/dev/null
 done
-# The encrypted metrics password envelope is verified in the private source repository.
-yq -e '.metadata.name == "alloy-secrets" and .spec.sourceRef.name == "homelab-secrets" and .spec.decryption.provider == "sops" and .spec.decryption.secretRef.name == "sops-age"' kubernetes/observability/alloy/secrets-ks.yaml >/dev/null
+# Verify the app-local Vault delivery contract without reading credentials.
+kubectl kustomize kubernetes/observability/alloy/app | yq -e 'select(.kind == "ExternalSecret" and .metadata.name == "talos-metrics-ingestion") | .metadata.namespace == "alloy" and .spec.secretStoreRef.kind == "ClusterSecretStore" and .spec.secretStoreRef.name == "oci-vault" and .spec.target.name == "talos-metrics-ingestion" and .spec.target.creationPolicy == "Orphan" and .spec.target.deletionPolicy == "Retain" and .spec.dataFrom[0].extract.key == "k8s-alloy-talos-metrics-ingestion"' >/dev/null
 alloy=kubernetes/observability/alloy/app/helmrelease.yaml
 ksm=kubernetes/observability/kube-state-metrics/app/helmrelease.yaml
 yq -e '.spec.values.alloy.enableReporting == false and .spec.values.controller.enableStatefulSetAutoDeletePVC == false' "$alloy" >/dev/null
-yq -e '(.spec | has("decryption") | not) and (.spec.dependsOn | map(.name) | sort | join(",")) == "alloy-secrets,homelab-private-config,kube-state-metrics,longhorn,metrics-server,tailscale-config"' kubernetes/observability/alloy/ks.yaml >/dev/null
+yq -e '(.spec | has("decryption") | not) and (.spec.dependsOn | map(.name) | sort | join(",")) == "external-secrets-config,homelab-private-config,kube-state-metrics,longhorn,metrics-server,tailscale-config"' kubernetes/observability/alloy/ks.yaml >/dev/null
 yq -e '.spec.values.controller.volumes.extra[0].secret.secretName == "talos-metrics-ingestion" and .spec.values.controller.volumes.extra[0].secret.optional == false and (.spec.values.controller.volumes.extra[0].secret.items | length) == 1 and .spec.values.controller.volumes.extra[0].secret.items[0].key == "password" and .spec.values.controller.volumes.extra[0].secret.items[0].path == "password" and .spec.values.alloy.mounts.extra[1].readOnly == true' "$alloy" >/dev/null
 yq -e '(.spec.values.collectors | sort | join(",")) == "deployments,nodes,pods,statefulsets" and (.spec.values.rbac.extraRules | length) == 0' "$ksm" >/dev/null
 config=$(yq -r '.spec.values.alloy.configMap.content' "$alloy")

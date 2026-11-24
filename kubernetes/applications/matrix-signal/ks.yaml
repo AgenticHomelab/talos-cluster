@@ -19,6 +19,6 @@ spec:
         name: homelab-private-vars
   dependsOn:
     - name: homelab-private-config
-    - name: matrix-signal-secrets
+    - name: external-secrets-config
     - name: matrix
     - name: cloudnative-pg

@@ -4,7 +4,6 @@ trap 'echo "FAIL: TrueNAS CSI desired-state contract at line $LINENO" >&2' ERR
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 release="$repo_root/kubernetes/infrastructure/truenas-csi/app/helmrelease.yaml"
-secret_owner="$repo_root/kubernetes/infrastructure/truenas-csi/secrets-ks.yaml"
 rendered="${1:?usage: truenas-csi-pilot-test.sh RENDERED_HELM_OUTPUT}"
 
 yq -e '
@@ -86,17 +85,9 @@ yq -p=yaml -e '
     select(.name == "iscsi-dir" and .hostPath.type == "DirectoryOrCreate")] | length) == 1
 ' <<<"$node_patch" >/dev/null
 
-# Ciphertext structure is validated in homelab-secrets. Require native private delivery here.
-yq -e '
-  .kind == "Kustomization" and
-  .metadata.name == "truenas-csi-secrets" and
-  .metadata.namespace == "flux-system" and
-  .spec.sourceRef.kind == "GitRepository" and
-  .spec.sourceRef.name == "homelab-secrets" and
-  .spec.decryption.provider == "sops" and
-  .spec.decryption.secretRef.name == "sops-age"
-' "$secret_owner" >/dev/null
-yq -e '(.spec.dependsOn | map(.name) | sort | join(",")) == "homelab-private-config,truenas-csi-secrets"' "$repo_root/kubernetes/infrastructure/truenas-csi/ks.yaml" >/dev/null
+# Verify app-local Vault delivery while preserving the existing Secret reference.
+kubectl kustomize "$repo_root/kubernetes/infrastructure/truenas-csi/app" | yq -e 'select(.kind == "ExternalSecret" and .metadata.name == "truenas-csi-api") | .metadata.namespace == "truenas-csi" and .spec.secretStoreRef.kind == "ClusterSecretStore" and .spec.secretStoreRef.name == "oci-vault" and .spec.target.name == "truenas-csi-api" and .spec.target.creationPolicy == "Orphan" and .spec.target.deletionPolicy == "Retain" and .spec.dataFrom[0].extract.key == "k8s-truenas-csi-truenas-csi-api"' >/dev/null
+yq -e '(.spec.dependsOn | map(.name) | sort | join(",")) == "external-secrets-config,homelab-private-config"' "$repo_root/kubernetes/infrastructure/truenas-csi/ks.yaml" >/dev/null
 
 if rg -q 'existingCABundleConfigMap|caBundle:' "$release"; then
   echo "The public CA trust path must not add a redundant CA bundle." >&2
@@ -131,4 +122,4 @@ if [[ "$driver_names" != "csi.truenas.io" ]]; then
   exit 1
 fi
 
-echo "PASS: TrueNAS CSI pilot and production classes preserve TLS, SOPS, non-default Retain and NFS boundaries."
+echo "PASS: TrueNAS CSI pilot and production classes preserve TLS, ESO, non-default Retain and NFS boundaries."

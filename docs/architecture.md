@@ -65,9 +65,7 @@ Dependencies are not used for cosmetic ordering, every runtime network relations
 
 ## Secrets
 
-Every Kubernetes Secret stored in Git is a SOPS-encrypted `*.sops.yaml` manifest governed by `.sops.yaml`. The owning reconciliation unit declares Flux SOPS decryption explicitly with `flux-system/sops-age`; global decryption support does not replace unit-local declaration.
-
-`sops-age` is a bootstrap secret created outside Git. AGE private keys, Talos secrets and generated credentials are never committed. Encrypted values are changed with SOPS tooling rather than by editing ciphertext manually. The two configured AGE recipients provide key-management and recovery redundancy.
+OCI Vault is canonical for stable project-managed runtime credentials. App-local ExternalSecrets reference a shared `oci-vault` ClusterSecretStore; ESO connects directly to OCI HTTPS APIs using a dedicated read-only User Principal and independently bootstrapped API signing key. Native application-generated and controller-generated credentials stay with their owners. Flux reconciles the declarations, not credential values. See [GitOps operations](gitops.md) and [bootstrap](bootstrap.md). Historical SOPS ciphertext and age identities are recovery-only; neither is required for current reconciliation.
 
 ## Storage architecture
 
@@ -87,13 +85,7 @@ lifecycle ownership of the child ZFS datasets and NFS exports it provisions
 for PVCs; never dual-manage them through TrueNAS OpenTofu. The CSI driver,
 StorageClasses and PVC manifests remain Flux-owned in this repository.
 
-For stable TrueNAS service credentials, OCI Vault is the intended canonical
-value and selected-version authority. Flux/SOPS remains the Kubernetes Secret
-delivery mechanism, and deployed SOPS ciphertext is not evidence that its
-current value has been verified against Vault. Preserve existing credentials
-until a separately validated, no-rotation adoption. Protected OpenTofu state
-may contain sensitive copies, but is not the password authority. Future public
-repository publication requires a separate audit of files, history and metadata.
+For the stable TrueNAS CSI credential, OCI Vault is the canonical value authority; ESO delivers its existing Kubernetes Secret interface. The November 2026 cutover verified unchanged Secret identity, keys, type and bytes. Protected OpenTofu state may contain sensitive copies, but is not the password authority. Preserve native CSI and TrueNAS ownership.
 
 Authentik PostgreSQL uses the CloudNativePG Barman Cloud Plugin for continuous
 WAL archiving and daily base backups to the externally managed Garage service
@@ -141,8 +133,9 @@ not passing validation. Other changes retain operator review and the
 normal CI gate.
 
 Flux normally reconciles merged Kubernetes changes. Hermes independently
-monitors deployed changes, diagnoses assigned incidents, and sends one Finnish
-Matrix summary at 07:00; it does not routinely merge Renovate PRs. A successful
+monitors deployed changes, diagnoses assigned incidents, and records daily
+evidence at 07:00 with Finnish Matrix notifications only for material exceptions;
+it does not routinely merge Renovate PRs. A successful
 merge or Ready controller does not prove functional acceptance. Verify service
 health, storage engines/replicas and backup dependencies where relevant. A
 reviewed Git revert can reverse eligible desired-state configuration, but not

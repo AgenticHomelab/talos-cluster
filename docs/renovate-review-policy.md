@@ -35,8 +35,17 @@ selects open, non-draft `renovate[bot]` PRs with a same-repository
 `renovate/` branch and `dependencies` label. It excludes PR descriptions identifying `siderolabs/talos` or
 `kubernetes/kubernetes` upgrades. Longhorn PRs are restricted to the
 earlier window. It attempts real GitHub API merges with an exact PR-head SHA,
-then refreshes the queue after each successful merge. A blocked merge is logged
-as an Actions warning/failure; normal GitHub protection is never bypassed.
+then refreshes the queue after each successful merge. Before attempting a
+merge it confirms the GitHub Actions `desired-state` check completed successfully
+for the exact current PR head, and that GitHub does not report conflicts,
+a pending mergeability calculation or a required rebase. A prior failed
+non-required `merge` check may set `mergeable_state=unstable`; this is allowed
+to proceed to GitHub's native protection check rather than blocking forever.
+Missing, queued, running or failed required checks and temporarily blocked
+merges are deferred to later scheduled/dispatch runs, not reported as merger
+failures.
+Unexpected API or merge errors still fail the workflow. Normal GitHub
+protection is never bypassed.
 
 A mixed update containing excluded Talos/Kubernetes version changes is not
 eligible. Review actual changes and track Talos/Kubernetes version PRs in the
@@ -61,8 +70,9 @@ upgrade limit is one per node. Hermes must observe real volume and replica
 outcomes, use supported version-matched procedures and avoid unsafe downgrades.
 See [Longhorn upgrade](longhorn-upgrade.md).
 
-Hermes monitors the cluster overnight and sends one Finnish Matrix report at
-07:00. Hermes does **not** perform routine Renovate merges. Its runtime and
+Hermes monitors the cluster overnight and records daily evidence at 07:00.
+Finnish Matrix notifications are reserved for material exceptions. Hermes does
+**not** perform routine Renovate merges. Its runtime and
 native jobs use the [Hermes operations sources](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md).
 The retired custom runner,
 merger and lifecycle tools remain disabled. The GitHub Actions workflow does

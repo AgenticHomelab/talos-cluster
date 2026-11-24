@@ -1,7 +1,7 @@
 # Desired-state validation and test tiers
 
 The `Validate desired state / desired-state` check runs the complete offline
-gate for all non-Markdown PRs targeting `main`, including Renovate-authored
+gate for all PRs targeting `main`, including documentation-only and Renovate-authored
 updates, and on manual workflow dispatch. It uses `contents: read`, no persisted
 Git credentials and no production secrets. The existing nightly Renovate merger
 must respect GitHub's required checks; a skipped, pending or failed check is not
@@ -15,11 +15,11 @@ Helm, kubectl (local Kustomize only), Flux CLI, plus envsubst and standard Linux
 binaries and checks their SHA-256 sums. No Python framework or packages are
 required. Use a clean checkout and an empty HOME without kubeconfigs or keys.
 
-Download the four exact chart versions declared by Git first:
+Download the five exact chart versions declared by Git first:
 
 ```sh
 chart_dir=$(mktemp -d)
-for entry in "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
+for entry in "infrastructure external-secrets" "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
   read -r unit_category unit <<<"$entry"
   version=$(yq -r '.spec.chart.spec.version' "kubernetes/$unit_category/$unit/app/helmrelease.yaml")
   repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
@@ -54,7 +54,7 @@ their rendered desired state is unchanged.
 
 Keep tests for plausible failures: read-only RBAC/group binding; ingress plane
 separation and exact public VIP/ports; scoped Alloy/KSM/log RBAC and mounted
-credentials; verified remote-write/log TLS boundaries; SOPS envelopes;
+credentials; verified remote-write/log TLS boundaries; ExternalSecret delivery and rejection of Git-tracked Secret manifests;
 CNPG recovery write/cleanup safety and recovery write/cleanup approval; network-policy
 error classification and bounded cleanup; revision-bound post-merge evidence;
 manual merges; and Vaultwarden schema-aware failure

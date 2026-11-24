@@ -66,16 +66,15 @@ check_repository_safety() {
       echo "Generated or local credential material is present: $file" >&2
       return 1
     fi
-    if [[ "$file" == kubernetes/*.yaml || "$file" == kubernetes/**/*.yaml ]]; then
-      if yq -e 'select(.kind == "Secret")' "$file" >/dev/null 2>&1 && [[ "$file" != *.sops.yaml ]]; then
-        echo "Plaintext Kubernetes Secret manifest is not allowed: $file" >&2
+    if [[ "$file" == .sops.yaml || "$file" == .sops.yml || "$file" == kubernetes/*.sops.yaml || "$file" == kubernetes/*.sops.yml ]]; then
+      echo "Retired Kubernetes Secret delivery file is not allowed: $file" >&2
+      return 1
+    fi
+    if [[ "$file" == kubernetes/*.yaml || "$file" == kubernetes/*.yml ]]; then
+      if yq -e 'select(.kind == "Secret" or has("sops"))' "$file" >/dev/null 2>&1; then
+        echo "Git-tracked Kubernetes Secret or encrypted manifest is not allowed: $file" >&2
         return 1
       fi
-    fi
-    if [[ "$file" == kubernetes/* && "$file" == *.sops.yaml ]] &&
-      (! rg -q '^sops:$' "$file" || ! rg -q 'ENC\[AES256_GCM' "$file"); then
-      echo "SOPS manifest is not encrypted: $file" >&2
-      return 1
     fi
   done
 }
@@ -117,6 +116,7 @@ helm_template_unit() {
   helm template "$unit" "$chart" --namespace "$unit" --kube-version "$kubernetes_version" \
     --values "$render_directory/$unit-values.yaml" > "$render_directory/$unit.yaml"
 }
+helm_template_unit external-secrets "infrastructure"
 helm_template_unit traefik "infrastructure"
 helm_template_unit truenas-csi "infrastructure"
 helm_template_unit alloy "observability"
@@ -143,16 +143,25 @@ for shell_file in "${shell_files[@]}"; do
   bash -n "$shell_file"
 done
 python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v
+# Run every independent shell contract so one failure does not hide the rest.
+failed_tests=()
 for test_file in scripts/tests/*-test.sh; do
   echo "=== Shell test: $test_file ==="
+  test_args=()
   case "$test_file" in
-    */truenas-csi-pilot-test.sh) bash "$test_file" "$render_directory/truenas-csi.yaml" ;;
-    */public-ingress-boundary-test.sh) bash "$test_file" "$render_directory/traefik.yaml" ;;
-    */talos-metrics-test.sh) bash "$test_file" "$render_directory/alloy.yaml" "$render_directory/kube-state-metrics.yaml" ;;
-    */talos-logs-test.sh) bash "$test_file" "$render_directory/alloy.yaml" ;;
-    *) bash "$test_file" ;;
+    */truenas-csi-pilot-test.sh) test_args=("$render_directory/truenas-csi.yaml") ;;
+    */public-ingress-boundary-test.sh) test_args=("$render_directory/traefik.yaml") ;;
+    */talos-metrics-test.sh) test_args=("$render_directory/alloy.yaml" "$render_directory/kube-state-metrics.yaml") ;;
+    */talos-logs-test.sh) test_args=("$render_directory/alloy.yaml") ;;
   esac
+  if ! bash "$test_file" "${test_args[@]}"; then
+    failed_tests+=("$test_file")
+  fi
 done
+if (("${#failed_tests[@]}" > 0)); then
+  printf 'FAIL: %s\n' "${failed_tests[@]}" >&2
+  exit 1
+fi
 
 echo "=== YAML and Kustomize ==="
 mapfile -t yaml_files < <(rg --files -g '*.yaml' -g '*.yml' | sort)
@@ -165,4 +174,4 @@ echo "=== Plaintext-secret safety ==="
 echo "=== Generated-file and Git diff safety ==="
 check_repository_safety "$repo_root"
 
-echo "PASS: Kubernetes GitOps desired state is internally consistent and renderable; repository Secret envelopes and generated-file boundaries pass. Talos/Omni validation is owned by the private source."
+echo "PASS: Kubernetes GitOps desired state is internally consistent and renderable; repository Secret delivery and generated-file boundaries pass. Talos/Omni validation is owned by the private source."

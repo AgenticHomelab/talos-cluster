@@ -14,7 +14,8 @@ from **00:00 to 03:59 Europe/Helsinki**, with Longhorn Helm/chart/manager PRs
 restricted to **00:00 to 01:59**. Talos Linux and Kubernetes versions remain
 outside this policy. The custom Hermes Renovate runner and merger are
 retired; Hermes monitors reconciliation, real per-volume engine progress
-and assigned incidents, and sends one Finnish Matrix summary at 07:00.
+and assigned incidents. The 07:00 report records evidence and notifies Matrix
+only for material exceptions.
 See [Renovate policy](renovate-review-policy.md) and
 [automation ownership](automation.md).
 

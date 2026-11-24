@@ -1,8 +1,7 @@
 # Agent operating model
 
 Flux uses this repository for Kubernetes desired state. The permanently private
-`AgenticHomelab/homelab-secrets` repository supplies private configuration, SOPS
-ciphertext and the Talos/Omni template and patches. Three physical Talos nodes
+`AgenticHomelab/homelab-secrets` repository supplies private noncredential configuration and the Talos/Omni template and patches. OCI Vault and ESO deliver stable runtime credentials. Three physical Talos nodes
 use local Longhorn NVMe. TrueNAS is a separate NAS and backup failure domain.
 TrueNAS CSI owns the PVC datasets and exports it creates.
 
@@ -23,7 +22,8 @@ and blanket merge privileges are excluded. Read
 
 | Owner | Persistent configuration |
 | --- | --- |
-| Flux | Kubernetes resources in `kubernetes/` and Secret delivery from the private source |
+| Flux | Kubernetes desired state, including app-local ExternalSecret declarations and private noncredential ConfigMap reconciliation |
+| ESO and OCI Vault | Synchronization of stable runtime Secret copies from canonical Vault values |
 | Omni | Talos lifecycle, machine identities, applied cluster template and encrypted etcd snapshots |
 | OCI OpenTofu (`AgenticHomelab/oci-control-server`) | OCI infrastructure, policies and Vault/IAM metadata |
 | TrueNAS OpenTofu (`AgenticHomelab/truenas-infra`) | ACME, selected stable storage resources, service identities and native policies |
@@ -41,7 +41,7 @@ and scoped runbook before proposing changes.
    Distinguish desired state, dated runtime, fresh measurements and
    unknown. Never treat a green controller as application acceptance.
 2. Inspect affected app directories, Kustomize ownership,
-   dependencies, PVC retention, SOPS configuration and external
+   dependencies, PVC retention, ExternalSecret delivery and external
    failure domains. Preserve unrelated changes and private keys.
 3. Use focused branches and Conventional Commits. Validate exact-head
    changes and current-main integration, run non-mutating checks,
@@ -58,16 +58,15 @@ and scoped runbook before proposing changes.
 The retired bespoke Renovate runner/merger, dashboard guard and old
 lifecycle jobs remain disabled; the minimal GitHub Actions merge workflow is
 independent of those retired components. Native overnight Hermes health checks
-record locally; one Finnish Matrix summary is sent at 07:00
-Europe/Helsinki. See [native Renovate policy](../renovate-review-policy.md)
+record locally. The 07:00 Europe/Helsinki report records daily evidence and
+sends a Finnish Matrix notification only for material exceptions. See [Renovate policy](../renovate-review-policy.md)
 and [OCI nightly maintenance](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-nightly-maintenance.md).
 
 ## Safety and recovery boundaries
 
 - Generated Talos secrets, kubeconfigs, age private identities,
   Git/bootstrap keys, operator OCI access and protected recovery
-  material remain outside Git. A SOPS ciphertext in Git is not a
-  recoverable decryption key.
+  material remain outside Git. Historical encrypted files are not proof of recoverable keys.
 - Omni's hourly encrypted etcd snapshots, Omni application archives,
   Longhorn replicas/backups, CNPG WAL/base backups and NAS media
   snapshots protect **different** layers. A saved backup is not a

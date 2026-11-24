@@ -26,7 +26,3 @@ spec:
     - name: traefik
     - name: cert-manager-config
     - name: external-dns
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age

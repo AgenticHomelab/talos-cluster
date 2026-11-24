@@ -123,7 +123,7 @@ while IFS= read -r file; do
       | @tsv
     ' "$file"
   )
-done < <(find "$apps_root" "$infrastructure_root" "$observability_root" -type f -name '*.yaml' ! -name '*.sops.yaml' -print | sort)
+done < <(find "$apps_root" "$infrastructure_root" "$observability_root" -type f -name '*.yaml' -print | sort)
 
 if ((failures > 0)); then
   echo "Service Audience validation failed with $failures finding(s)." >&2

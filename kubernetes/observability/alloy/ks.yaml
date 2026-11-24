@@ -21,7 +21,7 @@ spec:
         name: homelab-private-vars
   dependsOn:
     - name: homelab-private-config
-    - name: alloy-secrets
+    - name: external-secrets-config
     - name: longhorn
     - name: kube-state-metrics
     - name: metrics-server

@@ -6,7 +6,7 @@ This repository manages a production-like personal Talos Kubernetes homelab thro
 
 **Repository migration closed on 2026-11-22.** The four `AgenticHomelab/*`
 repositories are the accepted operational sources, including the installed
-Hermes Ansible source and the private SOPS/Talos assets. All three former
+Hermes Ansible source and the private configuration, Talos and protected operational assets. All three former
 `antief/*` repositories are private historical archives, not deployment or
 recovery sources. Do not treat historical migration plans, PRs or retrospective
 checklists as pending work. Current operating and recovery contracts take
@@ -41,11 +41,9 @@ Talos machine configuration, node-specific patches, and its validation tools liv
 The physical TrueNAS server's selected stable NAS infrastructure and
 TrueNAS-side service identities belong to `AgenticHomelab/truenas-infra` OpenTofu.
 The official TrueNAS CSI driver owns the PVC-specific child datasets and NFS
-exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and SOPS
-Secret delivery remain Flux-owned here. OCI Vault is the intended canonical
-source for stable project-managed TrueNAS API-key values; a currently deployed
-SOPS Secret is a consumer copy, not proof of completed Vault adoption. Do not
-change live credentials or claim a migration from documentation alone.
+exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and ExternalSecret delivery remain Flux-owned here. OCI Vault is canonical for the stable project-managed TrueNAS CSI API key.
+ESO delivers its Kubernetes consumer copy; do not change live credentials
+or infer credential rotation from a Secret synchronization.
 
 Operational commands in `docs/` and `scripts/` are runbooks and utilities. Their presence does not authorize executing them.
 
@@ -107,17 +105,19 @@ Established dependency patterns include:
 
 Use a separate `config-ks.yaml` and nested `config/` directory for resources that require controller CRDs or readiness. Do not remove or weaken dependencies merely to make reconciliation appear faster.
 
-## Secrets and SOPS
+## Secrets and OCI Vault
 
-Kubernetes secrets committed to Git must be SOPS-encrypted and named `*.sops.yaml`.
+Stable runtime credentials are stored in OCI Vault and delivered through
+app-local ExternalSecrets using the shared `oci-vault` ClusterSecretStore.
+Depend on `external-secrets-config` for initial readiness. Preserve target
+names, keys, types and consumer metadata. Use periodic synchronization with
+`creationPolicy: Orphan` and `deletionPolicy: Retain`; explicitly review
+cleanup when retiring a Secret in a surviving namespace.
 
-- Follow the repository's `.sops.yaml` creation rules.
-- Include encrypted manifests through the appropriate nested Kustomize resource list.
-- Ensure the owning Flux Kustomization has SOPS decryption configured with the `sops-age` secret.
-- Do not edit encrypted SOPS values manually; use SOPS tooling when an explicitly requested secret change is necessary.
-- Never replace encrypted values with plaintext placeholders in a committed manifest.
-- Do not decrypt secrets for inspection unless the user explicitly requests it and the task requires it.
-- Do not expose decrypted values in logs, diffs, comments, or responses.
+- Never commit plaintext credentials or decrypted values.
+- Historical SOPS ciphertext is retained in private Git history. Do not decrypt it without explicit authorization; the age identities are historical recovery material, not cluster bootstrap credentials.
+- Keep independent bootstrap credentials and recovery identities outside Git.
+- Application-owned mutable Secrets stay application-owned.
 
 Local Talos secrets, generated machine configuration, kubeconfigs, talosconfigs, AGE private keys, and etcd snapshots must remain untracked.
 
@@ -226,9 +226,11 @@ repository review requirements; these access PRs are not silently self-approved.
 
 Read [`docs/recovery-ownership-inventory.md`](docs/recovery-ownership-inventory.md)
 before deleting inactive resources or claiming that backup coverage is complete.
-Offsite Omni etcd snapshots do not include Longhorn PVCs, CNPG databases or
-TrueNAS-hosted application data. Keep recovery templates, ownership boundaries
-and retained OCI-host recovery dependencies until explicitly reviewed.
+Omni etcd snapshots do not include Longhorn PVCs, CNPG databases or
+TrueNAS-hosted application data. The current Garage target shares the TrueNAS
+failure domain; see [etcd backups](docs/etcd-backups.md) for the recovery
+boundary. Keep recovery templates, ownership boundaries and retained OCI-host
+recovery dependencies until explicitly reviewed.
 
 ## Repository publication
 
@@ -257,7 +259,7 @@ Before editing:
 
 1. Read `README.md`, `CONTEXT.md`, relevant ADRs, and the task-specific runbook. Follow [`docs/agents/operating-model.md`](docs/agents/operating-model.md) for agent responsibilities and authorization stages.
 2. Inspect the complete app or platform directory being changed.
-3. Trace its Kustomize resources, Flux path, sources, SOPS configuration, and `dependsOn` relationships.
+3. Trace its Kustomize resources, Flux path, sources, ExternalSecret configuration, and `dependsOn` relationships.
 4. Check the working tree and preserve unrelated changes.
 
 While editing:
@@ -292,7 +294,8 @@ while Talos Linux and Kubernetes versions are proposed in the private source and
 Longhorn manager/chart updates are eligible; native Longhorn V1 engine upgrades
 are enabled at one per node. See `docs/renovate-review-policy.md` and
 `docs/longhorn-upgrade.md`. Hermes's separately authorized nightly diagnostics,
-repairs and 07:00 Matrix report use the organization-owned
+repairs and 07:00 evidence report (Matrix only for material exceptions) use
+the organization-owned
 [Hermes operations sources](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md).
 The retired custom unattended runner, merger and lifecycle tools stay disabled;
 only the dedicated minimal GitHub Actions night merger is authorized.

@@ -27,49 +27,52 @@ Expected: three Ready control-plane nodes. Do not use `--break-glass` for normal
 
 ## 4. Bootstrap Flux prerequisites
 
-Create the `flux-system` namespace and provision the two bootstrap Secrets outside Git:
+Recover the two independent bootstrap Secrets outside Git, using the isolated
+operator-run [OCI bootstrap playbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-secrets-bootstrap.yml)
+and its protected inputs. See the [OCI bootstrap recovery runbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/talos-secrets-bootstrap.md).
+The playbook uses independent operator OCI authentication, not ESO or Flux.
+For a new cluster, create `flux-system` and `external-secrets` namespaces if
+absent before invoking it; existing namespaces must not be recreated. Flux
+subsequently owns the ESO namespace through its declared reconciliation unit.
+Use the protected pinned bundle selectors retained independently of the cluster.
 
-- `flux-system/sops-age` from the authorized age recovery identity.
-- `flux-system/homelab-secrets-git` with the independent read-only SSH deploy key for `AgenticHomelab/homelab-secrets` and verified `known_hosts` entries.
+- `flux-system/homelab-secrets-git`: existing read-only SSH deploy credential and verified host keys for the private repository.
+- `external-secrets/oci-vault-auth`: dedicated OCI API signing private key and fingerprint.
 
-The production `flux-system` source reads `AgenticHomelab/talos-cluster`
-over anonymous HTTPS. `AgenticHomelab/homelab-secrets` is the independent
-private source and keeps its own read-only SSH deploy identity. Neither
-source requires a new age identity.
+The public `flux-system` source reads this repository over anonymous HTTPS.
+The private GitRepository supplies noncredential ConfigMap inputs, including
+OCI provider metadata. Historical age identities are kept independently for
+historical Git recovery only; do not install `sops-age` on a new cluster.
+Keep private keys, generated credentials and protected inputs out of Git/logs.
+Use the accepted public and private source revisions for recovery; Git revert
+cannot undo resource pruning.
 
-For source recovery, use the last accepted GitOps revision in this public
-repository and the matching private source revision from reconciliation
-evidence. Verify that the exact commits are independently reachable and that
-the two off-Git bootstrap identities remain available. Reconstruct the
-public HTTPS and independent private SSH sources with their existing Flux
-resource identities. A source, revision, credential or prune change requires
-a separately reviewed recovery plan. A Git revert cannot undo pruning.
-
-The former `antief/talos-homelab` SSH source is historical. The recovery
-procedure uses the two current sources above. Preserve any historical deploy
-credential until its own authorized credential review.
-Keep all private identities out of Git and logs. Register only the corresponding
-public SSH key as a read-only deploy key on the private repository.
-
-Before any application Secret ownership transfer, verify the new private source and configuration:
+After Flux and ESO are installed, check:
 
 ```bash
 flux -n flux-system get sources git homelab-secrets
 flux -n flux-system get kustomizations homelab-private-config
 kubectl -n flux-system get configmap homelab-private-vars -o name
+kubectl get clustersecretstore oci-vault
+kubectl get externalsecrets -A
 ```
 
-Both Flux resources must be Ready and the ConfigMap must exist at the expected private Git revision. The private source is deliberately independent of `repositories` and `apps`, so missing credentials do not block current application reconciliation. Do not move Secret manifests or change existing prune ownership until separate transfer checks pass.
+The private source and ConfigMap, ESO store and app-local ExternalSecrets
+must converge before accepting recovery. Verify actual application functions.
 
 ## 5. Install Flux Operator and hand ownership to Git
 
-Install the Flux Operator Helm release in `flux-system` at the currently validated chart version. Then apply the repository entrypoint once to create the `FluxInstance` and cluster-level Flux Kustomizations:
+From the reviewed recovery revision, read the Flux Operator chart tag and digest
+from `kubernetes/infrastructure/flux-operator/app/ocirepository.yaml`. Verify
+the intended chart against the pinned digest before installation; do not use a
+floating chart tag. Then install the release in `flux-system` and apply the
+repository entrypoint once:
 
 ```bash
 helm upgrade --install flux-operator \
   oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
   --namespace flux-system \
-  --version 0.61.0
+  --version "$(yq -r '.spec.ref.tag' kubernetes/infrastructure/flux-operator/app/ocirepository.yaml)"
 
 kubectl apply -k kubernetes/clusters/talos-home
 ```

@@ -13,7 +13,7 @@ spec:
   wait: true
   timeout: 10m
   dependsOn:
-    - name: tailscale-secrets
+    - name: external-secrets-config
   sourceRef:
     kind: GitRepository
     name: flux-system

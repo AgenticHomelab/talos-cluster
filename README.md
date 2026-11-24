@@ -29,7 +29,9 @@ This project explores a more deliberate operating model:
 - Controllers and workloads reconcile independently through Flux.
 - Dependencies are explicit instead of hidden in an installation sequence.
 - Availability and recovery claims are documented and exercised.
-- Credentials and generated machine configuration stay outside Git.
+- OCI Vault is canonical for stable credentials; ESO synchronizes their
+  Kubernetes consumer copies. Credential values and generated machine
+  configuration stay outside Git.
 
 ## Architecture
 

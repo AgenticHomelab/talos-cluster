@@ -35,10 +35,13 @@ directories. Do not store independent/manual long-term recovery copies
 on those application backup mounts without separately protecting them
 from Odin's native expiry. Validate recent completed archives on both
 NAS mounts (gzip integrity and expected world entries) after changes;
-these are not tested restores.
+these are not tested restores. The new interval increases the nominal maximum
+age of a scheduled world archive from 15 minutes to three hours. A Helm env
+change may roll the singleton Pods; verify both servers, world saves and recent
+usable archives before and after an approved rollout.
 
 The **three-day policy applies only to world archives**, not to the
-installation rollback copies. In the pinned Odin 3.8.12 source,
+installation rollback copies. In the reviewed Odin 3.8.12 source,
 `STAGED_UPDATES=1` promotes new installations and retains timestamped
 copies under `/home/steam/valheim/.odin/rollback` without a native
 retention configuration. A prior full-installation-PVC incident was caused by accumulated
@@ -77,3 +80,24 @@ first. After delivery, verify both PVC/PV capacity and actual filesystem free
 space, game-server operation and the unaffected second server. Expansion
 cannot be undone by shrinking the PVC or reverting its size in Helm; a
 Helm rollback is not a data rollback. Do not edit PV capacity directly.
+
+## Valheim secondary recovery claims
+
+The secondary server adopts its accepted recovery installation and world
+claims through `existingClaim` references in its HelmRelease. The corresponding
+PVC declarations live in `worlds/brave-new-world/recovered-storage.yaml` and
+are protected from Flux pruning. Their historical `playtest55` names do not
+make them disposable: they are the active production data, including saves
+made after the recovery test. Do not reseed from an older archive or rename
+these claims as cosmetic cleanup.
+
+For a cutover from a temporary game Pod, first validate the exact desired
+resource diff and current backup evidence. Stop the sole writer gracefully,
+verify the shutdown save/archive and preserve an independent copy before
+letting the managed Deployment mount the same claims. Keep access settings
+and the existing NAS backup mount. Verify actual world identity/load,
+subsequent save/readback, a fresh usable NAS archive, three healthy replicas,
+and normal unsuspended Flux ownership. A query response alone is not world
+acceptance. Dispose of only explicitly reviewed inactive recovery resources
+after these checks; retained archive candidates are not live-world rollback
+instructions. The primary server must not be restarted for this change.

@@ -1,0 +1,37 @@
+# Historical recovery claim names are intentional: renaming would not move data.
+# These are the active production claims, not disposable test resources.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: valheim2-playtest55-saves3122
+  namespace: valheim
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    app.kubernetes.io/name: valheim2
+    purpose: production-world
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: valheim2-playtest55-server
+  namespace: valheim
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    app.kubernetes.io/name: valheim2
+    purpose: production-install
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 30Gi

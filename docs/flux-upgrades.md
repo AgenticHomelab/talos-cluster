@@ -42,7 +42,7 @@ an approved new Flux version are actually available.
 Prepare separate operator, Flux controller and (if relevant) web UI changes.
 Before approval, compare current and target chart identities, CRDs and
 `status.storedVersions`, RBAC, `FluxInstance` API compatibility, workload
-readiness and source/SOPS behavior. Check the official release interval, run
+readiness and Git source and ESO behavior. Check the official release interval, run
 exact-head validation and review integration with current `main`. Use one
 approved rollout at a time.
 

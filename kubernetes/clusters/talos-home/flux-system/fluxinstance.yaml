@@ -23,15 +23,3 @@ spec:
     url: https://github.com/AgenticHomelab/talos-cluster
     ref: refs/heads/main
     path: ./kubernetes/clusters/talos-home
-  kustomize:
-    patches:
-      - target:
-          kind: Kustomization
-          name: flux-system
-        patch: |
-          - op: add
-            path: /spec/decryption
-            value:
-              provider: sops
-              secretRef:
-                name: sops-age

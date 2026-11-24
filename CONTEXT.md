@@ -50,10 +50,10 @@ Dynamic TrueNAS-backed NFS storage whose availability depends on TrueNAS and the
 A named TrueNAS dataset mounted through a static PersistentVolume and managed outside the Kubernetes resource lifecycle.
 
 **Bootstrap Secret**:
-The `flux-system/sops-age` Secret created outside Git so Flux can decrypt Git-tracked secrets.
+An independently provisioned credential required before GitOps or ESO can recover: the private Git SSH deploy credential and the ESO OCI API signing credential.
 
-**Git-tracked Secret**:
-A SOPS-encrypted Kubernetes Secret manifest named `*.sops.yaml`.
+**ExternalSecret**:
+An app-local Git-tracked declaration of the existing Kubernetes Secret synchronized by ESO from OCI Vault. Credential values remain outside Git.
 
 **Web Ingress**:
 HTTP or HTTPS exposure through Traefik.

@@ -12,7 +12,7 @@ spec:
   timeout: 15m
   dependsOn:
     - name: homelab-private-config
-    - name: truenas-csi-secrets
+    - name: external-secrets-config
   sourceRef:
     kind: GitRepository
     name: flux-system
