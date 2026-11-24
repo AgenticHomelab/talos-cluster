@@ -144,16 +144,25 @@ for shell_file in "${shell_files[@]}"; do
   bash -n "$shell_file"
 done
 python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v
+# Run every independent shell contract so one failure does not hide the rest.
+failed_tests=()
 for test_file in scripts/tests/*-test.sh; do
   echo "=== Shell test: $test_file ==="
+  test_args=()
   case "$test_file" in
-    */truenas-csi-pilot-test.sh) bash "$test_file" "$render_directory/truenas-csi.yaml" ;;
-    */public-ingress-boundary-test.sh) bash "$test_file" "$render_directory/traefik.yaml" ;;
-    */talos-metrics-test.sh) bash "$test_file" "$render_directory/alloy.yaml" "$render_directory/kube-state-metrics.yaml" ;;
-    */talos-logs-test.sh) bash "$test_file" "$render_directory/alloy.yaml" ;;
-    *) bash "$test_file" ;;
+    */truenas-csi-pilot-test.sh) test_args=("$render_directory/truenas-csi.yaml") ;;
+    */public-ingress-boundary-test.sh) test_args=("$render_directory/traefik.yaml") ;;
+    */talos-metrics-test.sh) test_args=("$render_directory/alloy.yaml" "$render_directory/kube-state-metrics.yaml") ;;
+    */talos-logs-test.sh) test_args=("$render_directory/alloy.yaml") ;;
   esac
+  if ! bash "$test_file" "${test_args[@]}"; then
+    failed_tests+=("$test_file")
+  fi
 done
+if (("${#failed_tests[@]}" > 0)); then
+  printf 'FAIL: %s\n' "${failed_tests[@]}" >&2
+  exit 1
+fi
 
 echo "=== YAML and Kustomize ==="
 mapfile -t yaml_files < <(rg --files -g '*.yaml' -g '*.yml' | sort)
