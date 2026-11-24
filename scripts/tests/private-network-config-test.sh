@@ -22,6 +22,10 @@ export VALHEIM_LB_IP=192.0.2.203
 export VALHEIM2_LB_IP=192.0.2.204
 export ACME_CONTACT_EMAIL=operator@example.invalid
 export CONTROL01_TAILNET_FQDN=control.example.invalid
+export ESO_OCI_VAULT_OCID=example-vault-id
+export ESO_OCI_USER_OCID=example-user-id
+export ESO_OCI_TENANCY_OCID=example-tenancy-id
+export ESO_OCI_REGION=example-region-1
 
 # Check every reconciliation owner before consuming private network inputs.
 owners=(
@@ -32,6 +36,7 @@ owners=(
   kubernetes/infrastructure/longhorn/ks.yaml
   kubernetes/infrastructure/traefik/ks.yaml
   kubernetes/infrastructure/cert-manager/config-ks.yaml
+  kubernetes/infrastructure/external-secrets/config-ks.yaml
   kubernetes/infrastructure/metallb/config-ks.yaml
   kubernetes/infrastructure/tailscale/config-ks.yaml
   kubernetes/infrastructure/external-services/ks.yaml
@@ -50,6 +55,30 @@ for owner in "${owners[@]}"; do
   flux envsubst --strict < "$tmpdir/raw" > "$tmpdir/rendered"
   yq eval-all 'true' "$tmpdir/rendered" >/dev/null
 done
+
+# The store uses the separately restored auth Secret, not a Git credential.
+eso="$repo_root/kubernetes/infrastructure/external-secrets"
+yq -e '([.spec.dependsOn[] | select(.name == "external-secrets")] | length) == 1' "$eso/config-ks.yaml" >/dev/null
+kubectl kustomize "$eso/config" | flux envsubst --strict > "$tmpdir/eso-store"
+yq -e '
+  .apiVersion == "external-secrets.io/v1" and
+  .kind == "ClusterSecretStore" and .metadata.name == "oci-vault" and
+  .spec.provider.oracle.principalType == "UserPrincipal" and
+  .spec.provider.oracle.vault == strenv(ESO_OCI_VAULT_OCID) and
+  .spec.provider.oracle.region == strenv(ESO_OCI_REGION) and
+  .spec.provider.oracle.auth.user == strenv(ESO_OCI_USER_OCID) and
+  .spec.provider.oracle.auth.tenancy == strenv(ESO_OCI_TENANCY_OCID) and
+  .spec.provider.oracle.auth.secretRef.privatekey.name == "oci-vault-auth" and
+  .spec.provider.oracle.auth.secretRef.privatekey.namespace == "external-secrets" and
+  .spec.provider.oracle.auth.secretRef.privatekey.key == "privatekey" and
+  .spec.provider.oracle.auth.secretRef.fingerprint.name == "oci-vault-auth" and
+  .spec.provider.oracle.auth.secretRef.fingerprint.namespace == "external-secrets" and
+  .spec.provider.oracle.auth.secretRef.fingerprint.key == "fingerprint"
+' "$tmpdir/eso-store" >/dev/null
+if kubectl kustomize "$eso/config" | env -u ESO_OCI_VAULT_OCID flux envsubst --strict >/dev/null 2>&1; then
+  echo "ESO store must fail closed when a private identifier is missing" >&2
+  exit 1
+fi
 
 contracts=(
   'GARAGE_ENDPOINT_URL|kubernetes/applications/immich/app/postgres-objectstore.yaml'
