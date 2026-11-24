@@ -11,7 +11,7 @@ require separate checks.
 | --- | --- |
 | `kubernetes/applications/immich/ks.yaml` and `app/` | Namespace workload dependencies, 3-instance CNPG `immich-postgres`, app-local ExternalSecrets, ObjectStore, ScheduledBackup, TrueNAS CSI media PVC and NetworkPolicies |
 | `config-ks.yaml` and `config/` | OCI chart source, HelmRelease `immich`, ConfigMap values for server, ML and Valkey |
-| TrueNAS operator | `tank/k8s/static/immich-media` dataset, NFS export/ACLs, native snapshots, Garage and recovery copies |
+| TrueNAS operator / CSI | Native snapshots, Garage and recovery copies / PVC-owned media dataset and NFS export |
 | Flux/Omni | Kubernetes desired state / separately managed Talos machine lifecycle |
 
 Both Flux Kustomizations are unsuspended. The official OCI chart is pinned by digest. The 2026-11-17 media cutover
@@ -30,8 +30,9 @@ at `/data`. Its declared StorageClass is `truenas-csi-retain`;
 preserve its `Retain` lifecycle and Flux prune-disabled protection.
 The accepted 2026-11-17 mount used NFSv4.1 `sec=sys,hard`, numeric
 UID/GID `1000:1000`, and root mode `0750`. The CSI-owned child dataset
-is distinct from the retained original `tank/k8s/static/immich-media`
-source and its migration-pair snapshot. The requested `2Ti` claim capacity
+is distinct from the original static source and its recorded migration-pair
+snapshot. Verify the continued availability of historical recovery material
+before using it. The requested `2Ti` claim capacity
 is not proof of NAS headroom or a usable post-cutover snapshot.
 Do not replace `hard` with `soft`, change ACLs recursively, disable
 mount checks or delete the original source dataset as PV housekeeping.
@@ -115,13 +116,13 @@ daily scheduling succeeded. A completed initial Barman backup was reported
 on 2026-10-18; later schedule execution has not been accepted here.
 
 **Media:** Existing TrueNAS native periodic snapshot **task 33** recursively
-covers the source under `tank/k8s/static/` and CSI target under
-`tank/k8s/csi/`, scheduled at 00:00 Europe/Helsinki with four-week
-retention. The 2026-11-17 recorded source snapshot and database restore
-point form a retained migration recovery pair. The observed automatic
-CSI-target snapshot preceded the payload transfer, so it is not proof of
-post-cutover target snapshot coverage. Verify an actual usable target
-recovery point before relying on the schedule. Preserve the entire `/data`
+covers `tank/k8s/`, including the CSI target under `tank/k8s/csi/`,
+scheduled at 00:00 Europe/Helsinki with four-week retention. The
+2026-11-17 recorded source snapshot and database restore point formed a
+migration recovery pair; current availability must be verified. Daily
+native target snapshots were observed for 2026-11-18 through 2026-11-24.
+This establishes snapshot presence, not a usable paired restore.
+Verify the actual target recovery point before relying on the schedule. Preserve the entire `/data`
 tree including originals, thumbnails, video, profiles, internal backup
 files and `.immich` markers. Do not create a parallel snapshot schedule.
 
