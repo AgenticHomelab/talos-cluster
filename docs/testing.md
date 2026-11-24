@@ -1,7 +1,7 @@
 # Desired-state validation and test tiers
 
 The `Validate desired state / desired-state` check runs the complete offline
-gate for all non-Markdown PRs targeting `main`, including Renovate-authored
+gate for all PRs targeting `main`, including documentation-only and Renovate-authored
 updates, and on manual workflow dispatch. It uses `contents: read`, no persisted
 Git credentials and no production secrets. The existing nightly Renovate merger
 must respect GitHub's required checks; a skipped, pending or failed check is not
