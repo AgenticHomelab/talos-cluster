@@ -16,7 +16,7 @@ grep -qx "revision=$revision" <<<"$valheim_plan"
 grep -qx 'verification-class=flux-unit' <<<"$valheim_plan"
 grep -qx 'unit=valheim' <<<"$valheim_plan"
 grep -qx 'flux-kustomization=valheim' <<<"$valheim_plan"
-grep -qx 'flux-kustomization=valheim-secrets' <<<"$valheim_plan"
+[[ $(grep '^flux-kustomization=' <<<"$valheim_plan") == 'flux-kustomization=valheim' ]]
 expected_valheim_releases=$'helm-release=valheim/valheim\nhelm-release=valheim/valheim2'
 actual_valheim_releases="$(grep '^helm-release=' <<<"$valheim_plan")"
 if [[ "$actual_valheim_releases" != "$expected_valheim_releases" ]]; then
@@ -100,8 +100,7 @@ if [[ "$args" == *' gitrepository.source.toolkit.fluxcd.io '* ]]; then
   exit 0
 fi
 
-if [[ "$args" == *' kustomization.kustomize.toolkit.fluxcd.io valheim '* ||
-      "$args" == *' kustomization.kustomize.toolkit.fluxcd.io valheim-secrets '* ]]; then
+if [[ "$args" == *' kustomization.kustomize.toolkit.fluxcd.io valheim '* ]]; then
   printf '{"metadata":{"generation":1},"status":{"observedGeneration":1,"lastAppliedRevision":"refs/heads/main@sha1:%s","conditions":[{"type":"Ready","status":"True"}]}}\n' "$MOCK_REVISION"
   exit 0
 fi
@@ -129,14 +128,14 @@ MOCK_SOURCE_DRIFT_AFTER=999 \
     --changed-file kubernetes/applications/valheim/app/helmrelease.yaml >/dev/null
 
 rm -f "$counter"
-# The first three source reads establish the public and private baselines.
-# Drift on the next read, after both baselines have been captured.
+# The first two source reads establish the public baseline.
+# Drift on the next read during evidence collection.
 drift_output="$tmpdir/source-drift.log"
 if PATH="$mockbin:$PATH" \
   MOCK_REVISION="$revision" \
   MOCK_DRIFT_REVISION="$drift_revision" \
   MOCK_SOURCE_COUNTER="$counter" \
-  MOCK_SOURCE_DRIFT_AFTER=3 \
+  MOCK_SOURCE_DRIFT_AFTER=2 \
   bash "$verifier" \
     --revision "$revision" \
     --changed-file kubernetes/applications/valheim/app/helmrelease.yaml >"$drift_output" 2>&1; then
