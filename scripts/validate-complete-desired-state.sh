@@ -66,16 +66,16 @@ check_repository_safety() {
       echo "Generated or local credential material is present: $file" >&2
       return 1
     fi
-    if [[ "$file" == kubernetes/*.yaml || "$file" == kubernetes/**/*.yaml ]]; then
-      if yq -e 'select(.kind == "Secret")' "$file" >/dev/null 2>&1 && [[ "$file" != *.sops.yaml ]]; then
-        echo "Plaintext Kubernetes Secret manifest is not allowed: $file" >&2
+    # No active Git-tracked Kubernetes Secret payloads or encryption rules.
+    if [[ "$file" == .sops.yaml || "$file" == .sops.yml || "$file" == kubernetes/*.sops.yaml || "$file" == kubernetes/*.sops.yml ]]; then
+      echo "Retired SOPS delivery file is not allowed: $file" >&2
+      return 1
+    fi
+    if [[ "$file" == kubernetes/*.yaml || "$file" == kubernetes/*.yml ]]; then
+      if yq -e 'select(.kind == "Secret")' "$file" >/dev/null 2>&1; then
+        echo "Git-tracked Kubernetes Secret manifest is not allowed: $file" >&2
         return 1
       fi
-    fi
-    if [[ "$file" == kubernetes/* && "$file" == *.sops.yaml ]] &&
-      (! rg -q '^sops:$' "$file" || ! rg -q 'ENC\[AES256_GCM' "$file"); then
-      echo "SOPS manifest is not encrypted: $file" >&2
-      return 1
     fi
   done
 }
@@ -175,4 +175,4 @@ echo "=== Plaintext-secret safety ==="
 echo "=== Generated-file and Git diff safety ==="
 check_repository_safety "$repo_root"
 
-echo "PASS: Kubernetes GitOps desired state is internally consistent and renderable; repository Secret envelopes and generated-file boundaries pass. Talos/Omni validation is owned by the private source."
+echo "PASS: Kubernetes GitOps desired state is internally consistent and renderable; repository Secret delivery and generated-file boundaries pass. Talos/Omni validation is owned by the private source."

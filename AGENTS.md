@@ -6,7 +6,7 @@ This repository manages a production-like personal Talos Kubernetes homelab thro
 
 **Repository migration closed on 2026-11-22.** The four `AgenticHomelab/*`
 repositories are the accepted operational sources, including the installed
-Hermes Ansible source and the private SOPS/Talos assets. All three former
+Hermes Ansible source and the private configuration and Talos assets. All three former
 `antief/*` repositories are private historical archives, not deployment or
 recovery sources. Do not treat historical migration plans, PRs or retrospective
 checklists as pending work. Current operating and recovery contracts take

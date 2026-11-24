@@ -21,6 +21,20 @@ if "$validator" --check-repository "$tmpdir" >/dev/null 2>&1; then
 fi
 rm -f "$tmpdir/kubernetes/test/secret.yaml"
 
+# Even synthetic encrypted envelopes and root creation rules are retired.
+printf 'kind: Secret\nsops: {}\n' >"$tmpdir/kubernetes/test/secret.sops.yaml"
+if "$validator" --check-repository "$tmpdir" >/dev/null 2>&1; then
+  echo "retired encrypted delivery must fail repository safety" >&2
+  exit 1
+fi
+rm -f "$tmpdir/kubernetes/test/secret.sops.yaml"
+printf 'creation_rules: []\n' >"$tmpdir/.sops.yaml"
+if "$validator" --check-repository "$tmpdir" >/dev/null 2>&1; then
+  echo "retired creation rules must fail repository safety" >&2
+  exit 1
+fi
+rm -f "$tmpdir/.sops.yaml"
+
 printf 'generated credential\n' >"$tmpdir/kubeconfig-test"
 if "$validator" --check-repository "$tmpdir" >/dev/null 2>&1; then
   echo "untracked credential artifact must fail repository safety" >&2

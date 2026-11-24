@@ -18,7 +18,7 @@ post-renderer strategy changes. Existing controller and CRD identities were
 preserved; optional upstream controller components were not enabled.
 The operator performed supported CRD migration as part of the approved
 reconciliation. The recorded post-upgrade observations showed the expected
-controller images, Git/SOPS reconciliation, ready dependent releases and
+controller images, then-current Git/SOPS reconciliation (historical, replaced by ESO on 2026-11-24), ready dependent releases and
 no ownership transfer or availability regression.
 
 See the [Flux 2.9.6 release](https://github.com/fluxcd/flux2/releases/tag/v2.9.6),
@@ -31,13 +31,13 @@ Before a **new** Flux version PR:
 
 1. Confirm the current `FluxInstance` and operator HelmRelease, installed
    versions, controller Deployments, CRD served/storage versions, Git source,
-   SOPS decryption and application health.
+   ESO store and ExternalSecret readiness, and application health.
 2. Check Kubernetes support for the **new** version and review its complete
    changelog, CRD/API migrations, storage and ownership implications.
 3. Require exact-head CI, current-`main` integration and explicit operator
    merge approval. Never reinstall/bootstrap over a live Flux installation.
 4. Let normal Flux reconciliation handle the merged change; check controller
-   and workload readiness, source revision, SOPS-consuming resources and
+   and workload readiness, source revision, ESO-synchronized Secret consumers and
    representative services afterwards.
 5. Treat rollback as a distinct reviewed decision. Reverting a version
    selector does not revert migrated CRD storage or data.

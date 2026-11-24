@@ -54,7 +54,7 @@ their rendered desired state is unchanged.
 
 Keep tests for plausible failures: read-only RBAC/group binding; ingress plane
 separation and exact public VIP/ports; scoped Alloy/KSM/log RBAC and mounted
-credentials; verified remote-write/log TLS boundaries; SOPS envelopes;
+credentials; verified remote-write/log TLS boundaries; ExternalSecret consumer contracts and absence of legacy secret delivery;
 CNPG recovery write/cleanup safety and recovery write/cleanup approval; network-policy
 error classification and bounded cleanup; revision-bound post-merge evidence;
 manual merges; and Vaultwarden schema-aware failure

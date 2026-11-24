@@ -149,7 +149,7 @@ git diff --check
 
 The complete gate checks registry, Service Audience, Matrix
 bridge contract, shell tests and Kubernetes desired state,
-YAML/Kustomize renders, encrypted Secret envelopes and
+YAML/Kustomize renders, absence of Git-tracked Secret manifests and active SOPS configuration, and
 generated-file/whitespace safety. It needs **exact upstream
 chart archives** for offline Helm rendering. All source-change
 PRs run its `Validate desired state / desired-state`

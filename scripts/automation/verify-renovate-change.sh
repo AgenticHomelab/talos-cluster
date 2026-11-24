@@ -155,21 +155,20 @@ fi
 mapfile -t unit_names < <(printf '%s\n' "${!selected_units[@]}" | awk 'NF' | sort -u)
 
 declare -A flux_target_seen=()
-declare -A flux_target_source=()
 declare -A helm_target_seen=()
 declare -a flux_targets=()
 declare -a helm_targets=()
 
 collect_unit_targets() {
   local unit="$1" unit_root="$repo_root/kubernetes/$unit"
-  local file name namespace target_path source_kind source_name decryption_provider decryption_secret ref
+  local file name namespace target_path source_kind source_name ref
   local unit_flux_count=0
   mapfile -t top_level_yaml < <(
     find "$unit_root" -maxdepth 1 -type f \( -name '*.yaml' -o -name '*.yml' \) -print |
       sort
   )
   for file in "${top_level_yaml[@]}"; do
-    while IFS=$'\t' read -r name namespace target_path source_kind source_name decryption_provider decryption_secret; do
+    while IFS=$'\t' read -r name namespace target_path source_kind source_name; do
       [[ -n "$name" ]] || continue
       [[ "$name" =~ ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$ ]] || {
         echo "Flux Kustomization has an invalid name in $unit: $name" >&2
@@ -179,18 +178,10 @@ collect_unit_targets() {
         echo "Flux Kustomization $name is not in flux-system" >&2
         return 1
       }
-      [[ "$source_kind" == GitRepository &&
-         ( "$source_name" == flux-system || "$source_name" == homelab-secrets ) ]] || {
+      [[ "$source_kind" == GitRepository && "$source_name" == flux-system ]] || {
         echo "Flux Kustomization $name references an unsupported GitRepository: $source_kind/$source_name" >&2
         return 1
       }
-      if [[ "$source_name" == homelab-secrets ]]; then
-        [[ "$name" == *-secrets && "$decryption_provider" == sops &&
-           "$decryption_secret" == sops-age ]] || {
-          echo "Private Git Kustomization $name must be a SOPS-decrypting secrets unit" >&2
-          return 1
-        }
-      fi
       [[ "$target_path" == "./kubernetes/$unit/"* ]] || {
         echo "Flux Kustomization $name escapes reconciliation unit $unit: $target_path" >&2
         return 1
@@ -200,7 +191,6 @@ collect_unit_targets() {
         return 1
       fi
       flux_target_seen["$name"]="$unit"
-      flux_target_source["$name"]="$source_name"
       flux_targets+=("$name")
       unit_flux_count=$((unit_flux_count + 1))
     done < <(
@@ -211,9 +201,7 @@ collect_unit_targets() {
             (.metadata.namespace // ""),
             (.spec.path // ""),
             (.spec.sourceRef.kind // ""),
-            (.spec.sourceRef.name // ""),
-            (.spec.decryption.provider // "none"),
-            (.spec.decryption.secretRef.name // "none")
+            (.spec.sourceRef.name // "")
           ]
         | @tsv
       ' "$file"
@@ -350,9 +338,6 @@ source_is_target() {
 
 kustomization_is_ready() {
   local name="$1" json expected_revision="$revision"
-  if [[ "${flux_target_source[$name]}" == homelab-secrets ]]; then
-    expected_revision="$private_source_revision"
-  fi
   json="$(kubectl -n flux-system get kustomization.kustomize.toolkit.fluxcd.io "$name" -o json 2>/dev/null)" || return 1
   jq -e --arg revision "$expected_revision" '
     (.status.observedGeneration // 0) == .metadata.generation and
@@ -378,19 +363,6 @@ revision_matches "$initial_source_revision" || {
   echo "Flux source moved before verification started: $initial_source_revision" >&2
   exit 1
 }
-
-# A private Secret Kustomization follows the independent homelab-secrets revision.
-private_source_revision=
-for name in "${flux_targets[@]}"; do
-  if [[ "${flux_target_source[$name]}" == homelab-secrets ]]; then
-    private_source_revision="$(source_revision_once homelab-secrets 2>/dev/null || true)"
-    [[ -n "$private_source_revision" ]] || {
-      echo "Private GitRepository homelab-secrets has no available artifact" >&2
-      exit 1
-    }
-    break
-  fi
-done
 
 for name in "${flux_targets[@]}"; do
   wait_until "Flux Kustomization $name applied $revision" kustomization_is_ready "$name"
@@ -424,13 +396,6 @@ if [[ "$final_source_revision" != "$initial_source_revision" ]] || ! revision_ma
   echo "Flux source changed while repository-wide evidence was collected; stopping: initial=$initial_source_revision final=${final_source_revision:-unavailable}" >&2
   exit 1
 fi
-if [[ -n "$private_source_revision" ]]; then
-  final_private_revision="$(source_revision_once homelab-secrets 2>/dev/null || true)"
-  [[ "$final_private_revision" == "$private_source_revision" ]] || {
-    echo "Private Git source changed during verification; stopping" >&2
-    exit 1
-  }
-fi
 
 for name in "${flux_targets[@]}"; do
   kustomization_is_ready "$name" || {
@@ -449,13 +414,6 @@ closing_source_revision="$(source_revision_once 2>/dev/null || true)"
 if [[ "$closing_source_revision" != "$initial_source_revision" ]] || ! revision_matches "$closing_source_revision"; then
   echo "Flux source changed during final repository-wide verification; stopping: initial=$initial_source_revision final=${closing_source_revision:-unavailable}" >&2
   exit 1
-fi
-if [[ -n "$private_source_revision" ]]; then
-  closing_private_revision="$(source_revision_once homelab-secrets 2>/dev/null || true)"
-  [[ "$closing_private_revision" == "$private_source_revision" ]] || {
-    echo "Private Git source changed during final verification; stopping" >&2
-    exit 1
-  }
 fi
 
 printf 'PASS: exact revision %s remained stable; repository-wide post-merge verification class %s passed' \

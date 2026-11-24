@@ -22,7 +22,7 @@ pending upgrade proposal. Sources:
 [Flux upgrade guidance](https://fluxcd.io/flux/installation/upgrade/).
 
 Future changes still require live CRD served/storage and resource inventories,
-removed-API checks, rendered ownership/pruning comparison, SOPS and dependency
+removed-API checks, rendered ownership/pruning comparison, ESO and dependency
 validation, exact-head CI and current-base integration evidence. After an approved
 merge, verify normal reconciliation, controller health, source revisions and all
 child Kustomizations/HelmReleases. A Git revert is not a proven CRD downgrade.
@@ -154,7 +154,7 @@ extension requirements; Kubernetes downgrade must not be assumed supported.
 Repository publication remains NO-GO pending controlled review of tracked files,
 available history, personal infrastructure metadata, workflow/App permissions,
 license selection and independent recovery evidence. A pattern scan or encrypted
-Secret envelope check cannot certify a repository free of secrets. Keep detailed
+ExternalSecret contract check cannot certify a repository free of secrets. Keep detailed
 findings outside the prospective public repository; never reproduce credential
 values in an issue or PR.
 

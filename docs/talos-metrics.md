@@ -34,12 +34,12 @@ No Secret-read, cluster-wide arbitrary Pod log reader, kubelet
 `nodes/proxy`, mutating privilege or custom exporter is required.
 No public Service or ingress is part of the collector.
 
-SOPS-encrypted `alloy/talos-metrics-ingestion` contains only
+ESO-synchronized `alloy/talos-metrics-ingestion` contains only
 `password`, mounted read-only at `/etc/alloy/remote-write` and
 read by `password_file`. Its Basic Auth identity is
 `talos-home` and must match the operator-selected OCI Vault
-version and Nginx verifier. Keep independent age recovery
-identities outside Git and the host. Coordinate sender/receiver
+version and Nginx verifier. Keep independent bootstrap recovery
+credentials outside Git and the host. Coordinate sender/receiver
 rotation instead of issuing a competing Secret or weakening TLS.
 
 ## Reliability and verification
