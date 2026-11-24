@@ -121,7 +121,7 @@ spec:
           - sec=sys
         parameters:
           protocol: nfs
-          datasetPath: k8s/csi-delete
+          datasetPath: k8s/csi
           compression: LZ4
           nfs.rootSquash: "false"
           nfs.hosts: ${TRUENAS_NFS_CLIENT_HOSTS}

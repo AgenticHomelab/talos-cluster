@@ -17,8 +17,8 @@ yq -e '
   .spec.values.volumeSnapshotClass.enabled == false
 ' "$release" >/dev/null
 
-# Compare the exact transitional contracts, preserving all existing classes
-# until the retained volumes have been rebound and pilot resources retired.
+# Compare the exact transitional contracts. Keep the legacy classes until
+# retained volumes have been rebound and pilot resources retired.
 if ! yq -o=json '.spec.values.storageClasses' "$release" | jq -e '. == [
   {
     "name": "truenas-csi-pilot-delete",
@@ -87,7 +87,7 @@ if ! yq -o=json '.spec.values.storageClasses' "$release" | jq -e '. == [
     "mountOptions": ["hard", "nfsvers=4.1", "sec=sys"],
     "parameters": {
       "protocol": "nfs",
-      "datasetPath": "k8s/csi-delete",
+      "datasetPath": "k8s/csi",
       "compression": "LZ4",
       "nfs.rootSquash": "false",
       "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
@@ -123,7 +123,7 @@ if rg -q 'existingCABundleConfigMap|caBundle:' "$release"; then
   exit 1
 fi
 
-expected=
+expected=$'truenas-csi-delete\tDelete\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
 actual="$(yq -r '
   select(.kind == "StorageClass") |
   [.metadata.name, .reclaimPolicy,
@@ -131,7 +131,7 @@ actual="$(yq -r '
    .parameters.datasetPath, (.mountOptions | join(","))] | @tsv
 ' "$rendered" | rg -v '^(---)?$' | sort)"
 if [[ "$actual" != "$expected" ]]; then
-  echo "Rendered StorageClasses do not match the approved pilot and production contracts." >&2
+  echo "Rendered StorageClasses do not match the approved transitional contracts." >&2
   exit 1
 fi
 
@@ -140,7 +140,7 @@ if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | 
   exit 1
 fi
 
-# Check the rendered provisioner, binding, expansion and NFS parameter contract.
+# Check the rendered provisioner, binding, expansion and NFS parameters.
 yq -o=json 'select(.kind == "StorageClass")' "$rendered" | jq -se '
   length == 5 and all(.[];
     .provisioner == "csi.truenas.io" and
@@ -156,35 +156,6 @@ yq -o=json 'select(.kind == "StorageClass")' "$rendered" | jq -se '
      else true end))
 ' >/dev/null
 
-if rg -q '^kind: Secret
-  echo "The upstream Helm chart must not generate credentials." >&2
-  exit 1
-fi
-
-driver_names="$(yq -r 'select(.kind == "CSIDriver") | .metadata.name' "$rendered" | rg -v '^(---)?$')"
-if [[ "$driver_names" != "csi.truenas.io" ]]; then
-  echo "Unexpected CSI driver name(s): $driver_names" >&2
-  exit 1
-fi
-
-echo "PASS: TrueNAS CSI transitional classes preserve TLS, ESO, non-default reclaim policies and NFS boundaries."
-truenas-csi-delete\tDelete\tfalse\tk8s/csi-delete\thard,nfsvers=4.1,sec=sys\ntruenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
-actual="$(yq -r '
-  select(.kind == "StorageClass") |
-  [.metadata.name, .reclaimPolicy,
-   (.metadata.annotations["storageclass.kubernetes.io/is-default-class"] // "false"),
-   .parameters.datasetPath, (.mountOptions | join(","))] | @tsv
-' "$rendered" | rg -v '^(---)?$' | sort)"
-if [[ "$actual" != "$expected" ]]; then
-  echo "Rendered StorageClasses do not match the approved pilot and production contracts." >&2
-  exit 1
-fi
-
-if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | rg -v '^(---)?$' | wc -l)" -ne 3 ]]; then
-  echo "Expected two pilot classes and one production class." >&2
-  exit 1
-fi
-
 if rg -q '^kind: Secret$' "$rendered"; then
   echo "The upstream Helm chart must not generate credentials." >&2
   exit 1
@@ -196,45 +167,4 @@ if [[ "$driver_names" != "csi.truenas.io" ]]; then
   exit 1
 fi
 
-echo "PASS: TrueNAS CSI pilot and production classes preserve TLS, ESO, non-default Retain and NFS boundaries."
- "$rendered"; then
-  echo "The upstream Helm chart must not generate credentials." >&2
-  exit 1
-fi
-
-driver_names="$(yq -r 'select(.kind == "CSIDriver") | .metadata.name' "$rendered" | rg -v '^(---)?$')"
-if [[ "$driver_names" != "csi.truenas.io" ]]; then
-  echo "Unexpected CSI driver name(s): $driver_names" >&2
-  exit 1
-fi
-
 echo "PASS: TrueNAS CSI transitional classes preserve TLS, ESO, non-default reclaim policies and NFS boundaries."
-truenas-csi-delete\tDelete\tfalse\tk8s/csi-delete\thard,nfsvers=4.1,sec=sys\ntruenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
-actual="$(yq -r '
-  select(.kind == "StorageClass") |
-  [.metadata.name, .reclaimPolicy,
-   (.metadata.annotations["storageclass.kubernetes.io/is-default-class"] // "false"),
-   .parameters.datasetPath, (.mountOptions | join(","))] | @tsv
-' "$rendered" | rg -v '^(---)?$' | sort)"
-if [[ "$actual" != "$expected" ]]; then
-  echo "Rendered StorageClasses do not match the approved pilot and production contracts." >&2
-  exit 1
-fi
-
-if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | rg -v '^(---)?$' | wc -l)" -ne 3 ]]; then
-  echo "Expected two pilot classes and one production class." >&2
-  exit 1
-fi
-
-if rg -q '^kind: Secret$' "$rendered"; then
-  echo "The upstream Helm chart must not generate credentials." >&2
-  exit 1
-fi
-
-driver_names="$(yq -r 'select(.kind == "CSIDriver") | .metadata.name' "$rendered" | rg -v '^(---)?$')"
-if [[ "$driver_names" != "csi.truenas.io" ]]; then
-  echo "Unexpected CSI driver name(s): $driver_names" >&2
-  exit 1
-fi
-
-echo "PASS: TrueNAS CSI pilot and production classes preserve TLS, ESO, non-default Retain and NFS boundaries."
