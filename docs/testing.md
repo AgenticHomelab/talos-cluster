@@ -25,17 +25,22 @@ for entry in "infrastructure external-secrets" "infrastructure traefik" "infrast
   repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
   helm pull "$unit" --repo "$repository" --version "$version" --destination "$chart_dir"
 done
-HELM_KUBERNETES_VERSION=v1.37.2 HELM_CHARTS_DIR="$chart_dir" ./scripts/validate-complete-desired-state.sh
+HELM_KUBERNETES_VERSION=v1.36.4 HELM_CHARTS_DIR="$chart_dir" ./scripts/validate-complete-desired-state.sh
 rm -r "$chart_dir"
 ```
 
 Chart acquisition needs network access to upstream repositories. The gate itself
 uses only those local archives: `helm template` receives the actual Git values,
 release/namespace and the CI-pinned Kubernetes compatibility fixture. This
-fixture is a rendering target, not an authority for Talos/Kubernetes upgrades. Missing archives, missing
+fixture matches the accepted Kubernetes version and is a rendering target,
+not an authority for Talos/Kubernetes upgrades. Missing archives, missing
 renders or tool errors fail; chart security checks are no longer opt-in. No
 Secret is decrypted. Archive versions come from the manifests, so a Renovate
-upgrade does not require editing duplicate version assertions.
+upgrade does not require editing duplicate version assertions. TrueNAS CSI
+is intentionally an exception: update its reviewed `upstream.sha256` alongside
+the chart version after independent artifact verification. The same offline
+rendering gate checks the exact versioned archive locally and in CI; do not
+regenerate the checksum from an unreviewed download merely to pass CI.
 
 The gate runs all retained `scripts/tests/*-test.sh` programs and standard
 `unittest discover` for `test_*.py`. It also validates registry/Flux dependencies,
