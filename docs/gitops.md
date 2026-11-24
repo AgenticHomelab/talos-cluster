@@ -88,6 +88,19 @@ substitution of Secret-backed process environment variables. Offline tests subst
 actual configured hostnames and dependent routes must remain unchanged on cutover.
 A Ready source and successful offline rendering do not alone prove runtime acceptance.
 
+The OCI Vault migration introduces an independent ESO controller and
+`external-secrets-config` Kustomization. The latter depends on both
+the controller/CRDs and `homelab-private-config`. Its `oci-vault`
+ClusterSecretStore uses an explicit OCI User Principal, the private
+ConfigMap's `ESO_OCI_VAULT_OCID`, `ESO_OCI_REGION`,
+`ESO_OCI_USER_OCID` and `ESO_OCI_TENANCY_OCID`, and the separately
+bootstrapped `external-secrets/oci-vault-auth` Secret. Its API signing
+key and fingerprint never enter Git. Restore that Secret independently
+using the OCI control-server bootstrap runbook. Validate the Store's
+Ready condition and a bounded secret synchronization before moving any
+existing SOPS-owned consumers. This staging does not change their
+ownership or authorize pruning existing Secrets.
+
 Bootstrap age private keys and Git deploy credentials are kept
 outside Git. Private ciphertext does not by itself establish a
 recoverable backup. Never replace encrypted manifests with
