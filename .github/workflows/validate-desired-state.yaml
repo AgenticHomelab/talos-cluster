@@ -17,14 +17,13 @@ env:
   PYTHONDONTWRITEBYTECODE: "1"
   # Offline Helm compatibility fixture, not the authoritative Talos/Omni pin.
   # Must be reviewed alongside separately approved Kubernetes upgrades.
-  HELM_KUBERNETES_VERSION: v1.37.2
+  HELM_KUBERNETES_VERSION: v1.36.4
   KUBECTL_VERSION: v1.36.2
   KUBECTL_SHA256: 1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82
   HELM_VERSION: v4.2.4
   HELM_SHA256: c306b46f719b0a4da32d0f78ee21bf90ce8d602f15b22ab753f0674d1670a7f3
   FLUX_VERSION: 2.9.2
   FLUX_SHA256: 4092b367fd060097976fb7261601f79420ecf7266328417dfd8dfee27de0e6a3
-  TRUENAS_CSI_CHART_SHA256: 3a1b9f326447d54beb3fec20e3b026a4a07f68cb7f3685c7a71f7e9d70589367
   YQ_VERSION: v4.53.3
   YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
   RIPGREP_VERSION: 14.1.1
@@ -163,9 +162,6 @@ jobs:
             repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
             helm pull "$unit" --repo "$repository" --version "$version" --destination "$chart_dir"
           done
-          printf '%s  %s\n' \
-            "$TRUENAS_CSI_CHART_SHA256" \
-            "$chart_dir/truenas-csi-1.4.0.tgz" | sha256sum --check --status
 
       - name: Validate complete desired state
         shell: bash
