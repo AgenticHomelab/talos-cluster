@@ -8,7 +8,6 @@ rendered="${1:?usage: truenas-csi-pilot-test.sh RENDERED_HELM_OUTPUT}"
 
 yq -e '
   .spec.suspend != true and
-  .spec.chart.spec.version == "1.4.0" and
   .spec.values.truenas.url == "wss://truenas-api.${BASE_DOMAIN}:444/api/current" and
   .spec.values.truenas.defaultPool == "tank" and
   .spec.values.truenas.nfsServer == "${NAS_HOST_IP}" and

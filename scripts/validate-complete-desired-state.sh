@@ -112,6 +112,15 @@ helm_template_unit() {
   version=$(yq -r '.spec.chart.spec.version' "$release")
   chart="$HELM_CHARTS_DIR/$unit-$version.tgz"
   [[ -f "$chart" ]] || { echo "Required chart missing: $chart" >&2; exit 1; }
+  if [[ "$unit" == truenas-csi ]]; then
+    local checksum pinned_archive extra
+    read -r checksum pinned_archive extra < "kubernetes/$release_dir/$unit/upstream.sha256"
+    if [[ ! "$checksum" =~ ^[a-f0-9]{64}$ || "$pinned_archive" != "$unit-$version.tgz" || -n "$extra" ]]; then
+      echo "TrueNAS CSI chart version and reviewed checksum must be updated together." >&2
+      exit 1
+    fi
+    printf '%s  %s\n' "$checksum" "$chart" | sha256sum --check --status
+  fi
   yq '.spec.values' "$release" > "$render_directory/$unit-values.yaml"
   helm template "$unit" "$chart" --namespace "$unit" --kube-version "$kubernetes_version" \
     --values "$render_directory/$unit-values.yaml" > "$render_directory/$unit.yaml"
