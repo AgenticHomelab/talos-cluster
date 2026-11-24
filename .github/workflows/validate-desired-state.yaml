@@ -138,7 +138,18 @@ jobs:
           chmod 0755 "${RUNNER_TEMP}/gitleaks"
           # Scan checked-out files only: importing private Git history is forbidden.
           # Redact matched values in logs; a finding is a hard CI failure.
-          "${RUNNER_TEMP}/gitleaks" dir --no-banner --redact=100 .
+          report="${RUNNER_TEMP}/gitleaks-report.json"
+          if "${RUNNER_TEMP}/gitleaks" dir --no-banner --redact=100 \
+            --report-format json --report-path "$report" .; then
+            exit 0
+          else
+            status=$?
+            if [[ -s "$report" ]]; then
+              # Print only location and rule metadata, never matched content.
+              jq -r '.[] | [.File, (.StartLine | tostring), .RuleID] | @tsv' "$report"
+            fi
+            exit "$status"
+          fi
 
       - name: Fetch exact upstream charts for offline rendering
         shell: bash
