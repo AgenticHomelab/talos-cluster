@@ -17,6 +17,6 @@ condition = "AND"
 regexTarget = "secret"
 paths = [
     '(^|/)kubernetes/infrastructure/truenas-csi/app/externalsecret\.yaml$',
-    '(^|/)scripts/tests/truenas-csi-pilot-test\.sh$',
+    '(^|/)scripts/tests/truenas-csi-storage-test\.sh$',
 ]
 regexes = ['^k8s-truenas-csi-truenas-csi-api$']
