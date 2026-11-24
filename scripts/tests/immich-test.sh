@@ -20,7 +20,7 @@ def get(kind, name):
 assert not any(o["kind"] == "PersistentVolume" and o["metadata"]["name"] == "immich-media-static-pv" for o in objects)
 assert not any(o["kind"] == "PersistentVolumeClaim" and o["metadata"]["name"] == "immich-media" for o in objects)
 target = get("PersistentVolumeClaim", "immich-media-truenas")
-assert target["spec"]["storageClassName"] == "truenas-csi-production-retain"
+assert target["spec"]["storageClassName"] == "truenas-csi-retain"
 assert target["spec"]["accessModes"] == ["ReadWriteMany"]
 assert target["spec"]["resources"]["requests"]["storage"] == "2Ti"
 assert target["metadata"]["annotations"]["kustomize.toolkit.fluxcd.io/prune"] == "disabled"
