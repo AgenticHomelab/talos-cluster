@@ -9,13 +9,11 @@ in PR #449 after verifying no old-driver PV or workload consumers and
 confirming the normal Helm uninstall. TrueNAS NFS itself remains required,
 and Longhorn remains the replicated block layer.
 
-The API key is stored in the SOPS-encrypted `truenas-csi-api.sops.yaml` Secret
-and is never committed in plaintext. This is the current cluster-side
-credential delivery mechanism, **not** proof that the corresponding key
-has already been adopted as an OCI Vault secret. The agreed target is
-OCI Vault as authority for stable TrueNAS API-key values, with SOPS retaining
-the protected Kubernetes consumer copy. Do not rotate credentials as part
-of legacy-driver retirement.
+The API key is canonical in OCI Vault. The app-local `externalsecret.yaml`
+synchronizes the existing `truenas-csi/truenas-csi-api` Secret (`api-key`)
+through ESO. The 2026-11-24 cutover preserved its UID, keys, type and bytes.
+Keep the TrueNAS identity and CSI-owned storage lifecycle unchanged; do not
+rotate credentials as incidental maintenance.
 
 TLS verification remains enabled with the normal public CA trust store;
 the verified ACME certificate needs no private CA ConfigMap or insecure TLS.

@@ -32,12 +32,11 @@ https://control-01.tailscale.svc.cluster.local/loki/api/v1/push
 
 with TLS `server_name="metrics.${BASE_DOMAIN}"`, standard CA
 verification and no redirects. Authentication is the **separate**
-SOPS-encrypted `alloy/talos-logs-ingestion` Secret, key
+ESO-synchronized `alloy/talos-logs-ingestion` Secret, key
 `password`, user `talos-logs` and mounted
-`password_file`. It must match the selected OCI Vault v1
-authority and protected Nginx verifier. Never reuse the
-Talos metrics password; preserve independent age/private
-recovery keys and coordinate any credential rotation.
+`password_file`. Its value comes from the dedicated Kubernetes runtime bundle in OCI Vault
+and must match the protected Nginx verifier. Never reuse the Talos metrics
+password; retain independent bootstrap recovery and coordinate sender/receiver rotation.
 
 The writer indexes a small label set: `cluster`, `job`,
 `namespace`, `container`, `pod`; Loki may derive

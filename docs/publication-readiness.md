@@ -9,8 +9,7 @@ operator approval. The original GitOps history and the independent
 
 - Keep credentials, generated Talos and Omni identities, kubeconfigs, age
   identities, OpenTofu state, live backup artifacts and sensitive host data
-  outside Git. SOPS-encrypted manifests do not establish that the current
-  source tree is safe for publication.
+  outside Git. ExternalSecret declarations do not establish that a source tree is safe for publication.
 - Make examples reusable without disclosing unnecessary internal addressing,
   DNS/Tailnet topology, account identifiers, service tokens, credential
   recovery paths or administrative endpoints. Review the exposure of
@@ -30,7 +29,7 @@ operator approval. The original GitOps history and the independent
    secrets and operational data. Do not copy any candidate secret value into a
    GitHub issue, CI log or PR. The existing private repository and its history
    remain private and are not part of the export.
-2. Review SOPS recipient/key custody, bootstrap dependencies, recovery
+2. Review independent OCI signing and Git deploy-key custody, historical recovery identities, bootstrap dependencies, recovery
    runbooks, Flux deploy-key identity, the Omni control plane and OCI/Hermes
    cross-repository links. Check whether any disclosed credentials or access
    endpoints need rotation or redesign before publication.
