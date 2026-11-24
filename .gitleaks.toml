@@ -1,0 +1,22 @@
+# Retain every upstream rule. These two exact resource names are not secrets.
+[extend]
+useDefault = true
+
+[[allowlists]]
+targetRules = ["generic-api-key"]
+description = "Reviewed Valheim OCI Vault reference"
+condition = "AND"
+regexTarget = "secret"
+paths = ['(^|/)kubernetes/applications/valheim/app/externalsecret\.yaml$']
+regexes = ['^k8s-valheim-valheim-secret$']
+
+[[allowlists]]
+targetRules = ["generic-api-key"]
+description = "Reviewed TrueNAS CSI OCI Vault reference"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+    '(^|/)kubernetes/infrastructure/truenas-csi/app/externalsecret\.yaml$',
+    '(^|/)scripts/tests/truenas-csi-pilot-test\.sh$',
+]
+regexes = ['^k8s-truenas-csi-truenas-csi-api$']

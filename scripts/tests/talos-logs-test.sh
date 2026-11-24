@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline security contracts: ciphertext metadata only; no cluster or secret reads.
+# Offline security contracts: Vault references only; no cluster or secret reads.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
@@ -7,8 +7,8 @@ cd "$repo_root"
 [[ $# == 1 ]] || { echo "Supply exact rendered chart YAML (see docs/testing.md)" >&2; exit 2; }
 for render in "$@"; do [[ -s "$render" ]] || { echo "Missing chart render: $render" >&2; exit 1; }; done
 app=kubernetes/observability/alloy/app
-# The encrypted password envelope is verified in the private source repository.
-yq -e '.metadata.name == "alloy-secrets" and .spec.sourceRef.name == "homelab-secrets" and .spec.decryption.provider == "sops" and .spec.decryption.secretRef.name == "sops-age"' kubernetes/observability/alloy/secrets-ks.yaml >/dev/null
+# Verify the app-local Vault delivery contract without reading credentials.
+kubectl kustomize kubernetes/observability/alloy/app | yq -e 'select(.kind == "ExternalSecret" and .metadata.name == "talos-logs-ingestion") | .metadata.namespace == "alloy" and .spec.secretStoreRef.kind == "ClusterSecretStore" and .spec.secretStoreRef.name == "oci-vault" and .spec.target.name == "talos-logs-ingestion" and .spec.target.creationPolicy == "Orphan" and .spec.target.deletionPolicy == "Retain" and .spec.dataFrom[0].extract.key == "k8s-alloy-talos-logs-ingestion"' >/dev/null
 # Exactly two namespace-local grants, no cluster-wide Pods or Secret access.
 yq -o=json -I=0 '.' "$app/logs-rbac.yaml" | jq -se '
   length == 4 and
@@ -57,4 +57,4 @@ yq -o=json '.spec.values' "$app/helmrelease.yaml" | jq -e '
       ([ $pod.containers[0].volumeMounts[] | select(.name == "logs-ingestion") ][0].readOnly == true) and
       ([ $pod.volumes[] | select(.name == "logs-ingestion") ][0].secret.optional == false))
   ' >/dev/null
-echo 'PASS: scoped Pod/log RBAC, selected-v1 ciphertext, label/budget policy and stable trusted writer.'
+echo 'PASS: scoped Pod/log RBAC, OCI Vault delivery, label/budget policy and stable trusted writer.'

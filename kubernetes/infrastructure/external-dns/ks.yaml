@@ -19,5 +19,5 @@ spec:
         name: homelab-private-vars
   dependsOn:
     - name: homelab-private-config
-    - name: external-dns-secrets
+    - name: external-secrets-config
     - name: traefik

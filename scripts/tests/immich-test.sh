@@ -28,18 +28,28 @@ assert "volumeName" not in target["spec"]
 assert get("Cluster", "immich-postgres")["metadata"]["annotations"]["kustomize.toolkit.fluxcd.io/prune"] == "disabled"
 primary = get("Kustomization", "immich")["spec"]
 config = get("Kustomization", "immich-config")["spec"]
-assert {d["name"] for d in primary["dependsOn"]} == {"barman-cloud", "cloudnative-pg", "longhorn", "truenas-csi", "immich-secrets", "homelab-private-config"}
+assert {d["name"] for d in primary["dependsOn"]} == {"barman-cloud", "cloudnative-pg", "longhorn", "truenas-csi", "external-secrets-config", "homelab-private-config"}
 assert {d["name"] for d in config["dependsOn"]} == {"immich", "traefik", "cert-manager-config", "external-dns", "homelab-private-config"}
 # Both reconciliation units are enabled; offline rendering does not prove runtime health.
 assert primary.get("suspend") is False, "CNPG/Barman stage must remain active"
 assert config.get("suspend") is False, "Application reconciliation unit must remain enabled"
 assert primary["wait"] and "decryption" not in primary
-assert config["wait"] and config["decryption"] == {"provider": "sops", "secretRef": {"name": "sops-age"}}
-secret_owner = get("Kustomization", "immich-secrets")["spec"]
-assert secret_owner["sourceRef"] == {"kind": "GitRepository", "name": "homelab-secrets"}
-assert secret_owner["decryption"] == {"provider": "sops", "secretRef": {"name": "sops-age"}}
-assert secret_owner["path"] == "./kubernetes/applications/immich/app"
-# Exact encrypted Secret manifests and keys are validated in the private repo.
+assert config["wait"] and "decryption" not in config
+assert not any(o["kind"] == "Kustomization" and o["metadata"]["name"] == "immich-secrets" for o in objects)
+expected = {
+    "immich-postgres-user": ("k8s-immich-immich-postgres-user", "kubernetes.io/basic-auth"),
+    "immich-postgres-s3": ("k8s-immich-immich-postgres-s3", "Opaque"),
+    "immich-postgres-s3-ca": ("k8s-authentik-authentik-postgres-s3-ca", "Opaque"),
+}
+for name, (vault_name, secret_type) in expected.items():
+    es = get("ExternalSecret", name)
+    assert es["metadata"]["namespace"] == "immich"
+    spec = es["spec"]
+    assert spec["secretStoreRef"] == {"kind": "ClusterSecretStore", "name": "oci-vault"}
+    assert spec["target"]["name"] == name
+    assert spec["target"]["creationPolicy"] == "Orphan" and spec["target"]["deletionPolicy"] == "Retain"
+    assert spec["target"].get("template", {}).get("type", "Opaque") == secret_type
+    assert spec["dataFrom"] == [{"extract": {"key": vault_name}}]
 
 cluster = get("Cluster", "immich-postgres")["spec"]
 assert cluster["instances"] == 3 and cluster["affinity"]["podAntiAffinityType"] == "required"

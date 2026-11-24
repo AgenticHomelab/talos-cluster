@@ -178,7 +178,7 @@ validate_bridge_policy_contract() {
     echo "FAIL: mautrix-signal must be an independently reconciled unit" >&2
     return 1
   }
-  for dependency in matrix cloudnative-pg matrix-signal-secrets; do
+  for dependency in matrix cloudnative-pg external-secrets-config; do
     DEPENDENCY="$dependency" yq -e '
       select(.kind == "Kustomization" and .metadata.name == "matrix-signal")
       | [.spec.dependsOn[].name]
@@ -221,7 +221,7 @@ validate_bridge_policy_contract() {
     echo "FAIL: mautrix-whatsapp must be an independently reconciled unit" >&2
     return 1
   }
-  for dependency in matrix cloudnative-pg longhorn matrix-whatsapp-secrets; do
+  for dependency in matrix cloudnative-pg longhorn external-secrets-config; do
     DEPENDENCY="$dependency" yq -e '
       select(.kind == "Kustomization" and .metadata.name == "matrix-whatsapp")
       | [.spec.dependsOn[].name]
@@ -292,7 +292,7 @@ validate_bridge_policy_contract() {
       | select(. == "mautrix-whatsapp-secrets")]
     | select(length == 5)
   ' "$whatsapp" >/dev/null || {
-    echo "FAIL: mautrix-whatsapp init credentials must all come from its encrypted Secret" >&2
+    echo "FAIL: mautrix-whatsapp init credentials must all come from its existing Secret" >&2
     return 1
   }
   require_match "Synapse must load the WhatsApp application-service registration" \
@@ -320,27 +320,24 @@ validate_bridge_policy_contract() {
   fi
 }
 
-# The exact encrypted key schema is verified in the private repository tests.
-# Validate both registration and private delivery without copying ciphertext.
-yq -e '
-  select(.kind == "Kustomization" and .metadata.name == "matrix-whatsapp-secrets")
-  | .metadata.name
-' "$apps_render" >/dev/null || {
-  echo "FAIL: WhatsApp private Secret owner is absent from the unit registry" >&2
-  exit 1
-}
-yq -e '
-  .kind == "Kustomization" and
-  .metadata.name == "matrix-whatsapp-secrets" and
-  .spec.sourceRef.kind == "GitRepository" and
-  .spec.sourceRef.name == "homelab-secrets" and
-  .spec.decryption.provider == "sops" and
-  .spec.decryption.secretRef.name == "sops-age" and
-  .spec.path == "./kubernetes/applications/matrix-whatsapp/app"
-' "$repo_root/kubernetes/applications/matrix-whatsapp/secrets-ks.yaml" >/dev/null || {
-  echo "FAIL: WhatsApp encrypted Secret owner must reconcile from private Git" >&2
-  exit 1
-}
+# Verify app-local ESO delivery without fetching private credential values.
+for bridge in signal whatsapp; do
+  render="$signal_render"
+  [[ "$bridge" == signal ]] || render="$whatsapp_render"
+  BRIDGE="$bridge" yq -e '
+    select(.apiVersion == "external-secrets.io/v1" and .kind == "ExternalSecret")
+    | select(.metadata.namespace == ("matrix-" + strenv(BRIDGE)))
+    | .spec.secretStoreRef.kind == "ClusterSecretStore"
+      and .spec.secretStoreRef.name == "oci-vault"
+      and .spec.target.name == ("mautrix-" + strenv(BRIDGE) + "-secrets")
+      and .spec.target.creationPolicy == "Orphan"
+      and .spec.target.deletionPolicy == "Retain"
+      and .spec.dataFrom[0].extract.key == ("k8s-matrix-" + strenv(BRIDGE) + "-mautrix-" + strenv(BRIDGE) + "-secrets")
+  ' "$render" >/dev/null || {
+    echo "FAIL: bridge Secret must reconcile from OCI Vault" >&2
+    exit 1
+  }
+done
 
 validate_identity_contract "$matrix_render" "$authentik_render"
 validate_discovery_contract "$matrix_render" "$apps_render" "$element_render"

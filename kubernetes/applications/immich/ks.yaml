@@ -4,7 +4,7 @@ metadata:
   name: immich
   namespace: flux-system
 spec:
-  # Includes CNPG/Barman, encrypted Secrets, network policies and TrueNAS CSI media.
+  # Includes CNPG/Barman, ExternalSecrets, network policies and TrueNAS CSI media.
   suspend: false
   interval: 10m
   retryInterval: 1m
@@ -21,7 +21,7 @@ spec:
         name: homelab-private-vars
   dependsOn:
     - name: homelab-private-config
-    - name: immich-secrets
+    - name: external-secrets-config
     - name: barman-cloud
     - name: cloudnative-pg
     - name: longhorn

@@ -33,9 +33,8 @@ kubernetes/<category>/<unit>/
   namespace.yaml
   kustomization.yaml
   ks.yaml                    # primary Flux Kustomization
-  secrets-ks.yaml            # optional private SOPS Secret owner
   app/kustomization.yaml
-  app/...                    # resources excluding private Secrets
+  app/...                    # workload resources and ExternalSecrets
   config-ks.yaml             # optional controller-dependent owner
   config/...                 # controller-dependent resources
 ```
@@ -56,24 +55,18 @@ Do not move controller-dependent CRs into an earlier phase.
 
 ## SOPS and storage boundaries
 
-Kubernetes Secret manifests are SOPS-encrypted `*.sops.yaml`
-resources kept in the permanently private
-`AgenticHomelab/homelab-secrets` repository, under their original
-`kubernetes/<category>/<unit>/app/` or `config/` paths. Its
-`flux-system/homelab-secrets` GitRepository authenticates with
-`flux-system/homelab-secrets-git`. Each unit-local `*-secrets`
-Flux Kustomization reads only that private Git source and decrypts
-with the existing `flux-system/sops-age` identity. The original
-application/config Kustomization depends on its private Secret owner
-but retains ownership of its workloads, databases, PVCs and policies.
+Stable runtime credentials are canonical in OCI Vault. Flux owns app-local
+ExternalSecret manifests; ESO owns synchronization of the corresponding
+Kubernetes Secrets. Applications continue using their existing Secret names,
+keys and types. Application-generated mutable credentials remain application-owned.
+The private GitRepository remains necessary for noncredential configuration.
+Historical encrypted manifests and the age identity are retained during
+migration acceptance and rollback, not as a second active runtime Secret source.
 
-During any future source or ownership transfer, first reconcile
-`prune: false` in every old owner **before** removing its Secret
-from the old Git source. After the new owner is Ready and its inventory
-contains the existing Secret while the old inventory does not,
-verify Secret object continuity and restore the old owner's
-`prune: true`. Reverting Git alone is not a safe rollback if a
-resource was already garbage-collected.
+During an ownership transfer, reconcile `prune: false` on the former SOPS
+owner before removing it. Verify that the old owner is absent, ESO reports
+successful synchronization, Secret UID/type/keys/bytes are unchanged, and
+consumers function. Reverting Git alone cannot undo garbage collection.
 
 The separate `homelab-private-config` Flux Kustomization reads the nonsecret
 `kubernetes/private-config` ConfigMap from the private Git source into
@@ -88,7 +81,7 @@ substitution of Secret-backed process environment variables. Offline tests subst
 actual configured hostnames and dependent routes must remain unchanged on cutover.
 A Ready source and successful offline rendering do not alone prove runtime acceptance.
 
-The OCI Vault migration introduces an independent ESO controller and
+The independent ESO controller has an
 `external-secrets-config` Kustomization. The latter depends on both
 the controller/CRDs and `homelab-private-config`. Its `oci-vault`
 ClusterSecretStore uses an explicit OCI User Principal, the private
@@ -104,13 +97,11 @@ ownership or authorize pruning existing Secrets.
 For migrated consumers, put the ExternalSecret beside the workload in its
 existing app or config path, and depend on `external-secrets-config`.
 Do not retain a separate per-app Secret Kustomization unless a genuine
-initial ordering requirement needs it. In the AIOStreams pilot, the old
-SOPS owner must first be observed with `prune: false` before removing it
-from the registry. ESO periodically synchronizes the existing Secret
+initial ordering requirement needs it. ESO periodically synchronizes the existing Secret
 with `creationPolicy: Orphan` and `deletionPolicy: Retain`; removing the
 ExternalSecret during a rollback does not garbage-collect the target.
 The tradeoff is explicit cleanup when retiring a Secret in a surviving
-namespace. Preserve the private ciphertext until migration acceptance.
+namespace. Preserve the private ciphertext until migration acceptance. Authentik's Helm values Secret carries the Flux watch label for prompt reconciliation when ESO creates or updates it. Preserve explicit non-Opaque Secret types and consumer reload labels.
 
 Bootstrap age private keys and Git deploy credentials are kept
 outside Git. Private ciphertext does not by itself establish a

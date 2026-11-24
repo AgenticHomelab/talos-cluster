@@ -12,7 +12,7 @@ spec:
   timeout: 10m
   dependsOn:
     - name: homelab-private-config
-    - name: cloudflare-ddns-secrets
+    - name: external-secrets-config
   sourceRef:
     kind: GitRepository
     name: flux-system

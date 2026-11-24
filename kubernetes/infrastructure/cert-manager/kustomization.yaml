@@ -3,5 +3,4 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - ks.yaml
-  - secrets-ks.yaml
   - config-ks.yaml
