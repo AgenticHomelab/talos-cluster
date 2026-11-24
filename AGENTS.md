@@ -228,8 +228,9 @@ Read [`docs/recovery-ownership-inventory.md`](docs/recovery-ownership-inventory.
 before deleting inactive resources or claiming that backup coverage is complete.
 Omni etcd snapshots do not include Longhorn PVCs, CNPG databases or
 TrueNAS-hosted application data. The current Garage target shares the TrueNAS
-failure domain; see [etcd backups](docs/etcd-backups.md) for the recovery boundary. Keep recovery templates, ownership boundaries
-and retained OCI-host recovery dependencies until explicitly reviewed.
+failure domain; see [etcd backups](docs/etcd-backups.md) for the recovery
+boundary. Keep recovery templates, ownership boundaries and retained OCI-host
+recovery dependencies until explicitly reviewed.
 
 ## Repository publication
 
@@ -293,7 +294,8 @@ while Talos Linux and Kubernetes versions are proposed in the private source and
 Longhorn manager/chart updates are eligible; native Longhorn V1 engine upgrades
 are enabled at one per node. See `docs/renovate-review-policy.md` and
 `docs/longhorn-upgrade.md`. Hermes's separately authorized nightly diagnostics,
-repairs and 07:00 evidence report (Matrix only for material exceptions) use the organization-owned
+repairs and 07:00 evidence report (Matrix only for material exceptions) use
+the organization-owned
 [Hermes operations sources](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md).
 The retired custom unattended runner, merger and lifecycle tools stay disabled;
 only the dedicated minimal GitHub Actions night merger is authorized.

@@ -25,7 +25,8 @@ image unchanged. Review a coordinated upstream manifest, checksum, effective
 image/digest and test update when upgrading the controller.
 
 Flux deploys merged Kubernetes state, and Hermes monitors deployments, repairs
-incidents and sends the single 07:00 Finnish Matrix report.
+incidents and records daily evidence at 07:00. Finnish Matrix notifications
+are reserved for material exceptions.
 Hermes owns its native jobs. For their source and protected inputs, see
 [the Renovate review policy](renovate-review-policy.md) and
 [Longhorn upgrade guidance](longhorn-upgrade.md).

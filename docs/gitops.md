@@ -167,8 +167,8 @@ Europe/Helsinki night window, Longhorn Helm PRs in
 excluded. Renovate-authored PRs now run the same offline
 `desired-state` Actions job as other source changes. A skipped
 or unsuccessful check is not passing validation. Hermes handles
-post-merge health/repair and the daily 07:00 Matrix summary,
-not routine merges. The public repository's workflow owns the nightly merge.
+post-merge health/repair and the daily 07:00 evidence record (Matrix only
+for material exceptions), not routine merges. The public repository's workflow owns the nightly merge.
 The workflow requires the repository variable
 `RENOVATE_NIGHTLY_MERGE_ENABLED=true`.
 See [Renovate policy](renovate-review-policy.md).
