@@ -53,20 +53,17 @@ Where a controller supplies CRDs required by the app, use a
 separate local `config-ks.yaml` and explicit dependency.
 Do not move controller-dependent CRs into an earlier phase.
 
-## SOPS and storage boundaries
+## Secrets and storage boundaries
 
 Stable runtime credentials are canonical in OCI Vault. Flux owns app-local
 ExternalSecret manifests; ESO owns synchronization of the corresponding
 Kubernetes Secrets. Applications continue using their existing Secret names,
 keys and types. Application-generated mutable credentials remain application-owned.
 The private GitRepository remains necessary for noncredential configuration.
-Historical encrypted manifests and the age identity are retained during
-migration acceptance and rollback, not as a second active runtime Secret source.
-
-During an ownership transfer, reconcile `prune: false` on the former SOPS
-owner before removing it. Verify that the old owner is absent, ESO reports
-successful synchronization, Secret UID/type/keys/bytes are unchanged, and
-consumers function. Reverting Git alone cannot undo garbage collection.
+The 2026-11-24 cutover was accepted with 32/32 Secret UIDs, types, keys and
+bytes unchanged, all ExternalSecrets and Flux units Ready, and applications
+functional. Historical SOPS ciphertext is retained in private Git history;
+age identities remain independently recoverable and are not runtime credentials.
 
 The separate `homelab-private-config` Flux Kustomization reads the nonsecret
 `kubernetes/private-config` ConfigMap from the private Git source into
@@ -89,25 +86,22 @@ ConfigMap's `ESO_OCI_VAULT_OCID`, `ESO_OCI_REGION`,
 `ESO_OCI_USER_OCID` and `ESO_OCI_TENANCY_OCID`, and the separately
 bootstrapped `external-secrets/oci-vault-auth` Secret. Its API signing
 key and fingerprint never enter Git. Restore that Secret independently
-using the OCI control-server bootstrap runbook. Validate the Store's
-Ready condition and a bounded secret synchronization before moving any
-existing SOPS-owned consumers. This staging does not change their
-ownership or authorize pruning existing Secrets.
+using the OCI control-server bootstrap runbook. Validate the Store's Ready condition and a bounded secret synchronization
+when recovering or changing its provider configuration.
 
-For migrated consumers, put the ExternalSecret beside the workload in its
+For stable runtime credentials, put the ExternalSecret beside the workload in its
 existing app or config path, and depend on `external-secrets-config`.
 Do not retain a separate per-app Secret Kustomization unless a genuine
 initial ordering requirement needs it. ESO periodically synchronizes the existing Secret
 with `creationPolicy: Orphan` and `deletionPolicy: Retain`; removing the
 ExternalSecret during a rollback does not garbage-collect the target.
 The tradeoff is explicit cleanup when retiring a Secret in a surviving
-namespace. Preserve the private ciphertext until migration acceptance. Authentik's Helm values Secret carries the Flux watch label for prompt reconciliation when ESO creates or updates it. Preserve explicit non-Opaque Secret types and consumer reload labels.
+namespace. Authentik's Helm values Secret carries the Flux watch label for prompt reconciliation when ESO creates or updates it. Preserve explicit non-Opaque Secret types and consumer reload labels.
 
-Bootstrap age private keys and Git deploy credentials are kept
-outside Git. Private ciphertext does not by itself establish a
-recoverable backup. Never replace encrypted manifests with
-placeholders, include decrypted values in PRs, or use direct Secret
-patches as durable configuration.
+Bootstrap API signing and Git deploy credentials are kept outside Git and
+recovered independently of ESO. Keep historical age identities recoverable.
+Never include credential values in PRs or use direct Secret patches as durable
+configuration.
 
 Longhorn block storage, TrueNAS dynamically provisioned
 NFS and static retained NAS PVs have distinct owners and
