@@ -3,7 +3,8 @@
 Status: **DEPLOYED and VERIFIED on 2026-10-12**. The `flux-web-ui`
 reconciliation unit owns the server-only `flux-web` Helm release at
 Flux Operator chart `0.61.0`. The Flux controller installation is owned by
-the separate GitOps-managed `flux-operator` release; both are now 0.61.0.
+the separate GitOps-managed `flux-operator` release; both were 0.61.0 at
+this upgrade. Inspect the current Git pins for subsequent updates.
 This web deployment does not own CRDs or the `flux-system` Namespace.
 
 ## Historical review

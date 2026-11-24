@@ -36,7 +36,7 @@ PY
 
 # OCI chart discovery must retain immutable artifact selection.
 while IFS= read -r path; do
-  yq -e 'select(.kind == "OCIRepository") | (.spec.ref.tag | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+")) and (.spec.ref.digest | test("^sha256:[a-f0-9]{64}$")) and (.spec.ref | has("semver") | not)' "$repo_root/$path" >/dev/null
+  yq -e 'select(.kind == "OCIRepository") | (.spec.ref.tag | test("^v?[0-9]+[.][0-9]+[.][0-9]+")) and (.spec.ref.digest | test("^sha256:[a-f0-9]{64}$")) and (.spec.ref | has("semver") | not)' "$repo_root/$path" >/dev/null
 done <<'EOF'
 kubernetes/flux/repositories/bjw-s-app-template.yaml
 kubernetes/applications/immich/config/ocirepository.yaml

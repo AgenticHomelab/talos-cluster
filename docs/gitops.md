@@ -177,7 +177,7 @@ Local non-mutating validation:
 
 ```bash
 ./scripts/validate-reconciliation-unit-registry.sh
-HELM_KUBERNETES_VERSION=v1.37.2 \
+HELM_KUBERNETES_VERSION=v1.36.4 \
   HELM_CHARTS_DIR=/path/to/verified/chart-archives \
   ./scripts/validate-complete-desired-state.sh
 git diff --check
