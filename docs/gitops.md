@@ -101,6 +101,17 @@ Ready condition and a bounded secret synchronization before moving any
 existing SOPS-owned consumers. This staging does not change their
 ownership or authorize pruning existing Secrets.
 
+For migrated consumers, put the ExternalSecret beside the workload in its
+existing app or config path, and depend on `external-secrets-config`.
+Do not retain a separate per-app Secret Kustomization unless a genuine
+initial ordering requirement needs it. In the AIOStreams pilot, the old
+SOPS owner must first be observed with `prune: false` before removing it
+from the registry. ESO periodically synchronizes the existing Secret
+with `creationPolicy: Orphan` and `deletionPolicy: Retain`; removing the
+ExternalSecret during a rollback does not garbage-collect the target.
+The tradeoff is explicit cleanup when retiring a Secret in a surviving
+namespace. Preserve the private ciphertext until migration acceptance.
+
 Bootstrap age private keys and Git deploy credentials are kept
 outside Git. Private ciphertext does not by itself establish a
 recoverable backup. Never replace encrypted manifests with
