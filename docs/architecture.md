@@ -133,8 +133,9 @@ not passing validation. Other changes retain operator review and the
 normal CI gate.
 
 Flux normally reconciles merged Kubernetes changes. Hermes independently
-monitors deployed changes, diagnoses assigned incidents, and sends one Finnish
-Matrix summary at 07:00; it does not routinely merge Renovate PRs. A successful
+monitors deployed changes, diagnoses assigned incidents, and records daily
+evidence at 07:00 with Finnish Matrix notifications only for material exceptions;
+it does not routinely merge Renovate PRs. A successful
 merge or Ready controller does not prove functional acceptance. Verify service
 health, storage engines/replicas and backup dependencies where relevant. A
 reviewed Git revert can reverse eligible desired-state configuration, but not

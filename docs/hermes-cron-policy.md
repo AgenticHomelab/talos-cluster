@@ -8,9 +8,11 @@ current ownership policy, not proof of live job execution.
 
 The documented `talos-nightly-health` job checks assigned cluster updates
 every 30 minutes between 00:00 and 06:30 Europe/Helsinki and records locally;
-it does not send Matrix progress messages. `talos-nightly-report` sends exactly
-one concise Finnish Matrix summary at 07:00 daily, including when no changes
-occurred. A separate daily 09:00 native administrator-JWT lifecycle job was
+it does not send Matrix progress messages. `talos-nightly-report` writes a
+daily evidence record at 07:00. Routine healthy nights and ordinary successful
+updates are silent; only new or materially worsened incidents, major verified
+repairs or actionable blocked repairs warrant a Finnish Matrix notification.
+See the [current report prompt](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/fleet-health/talos-nightly-report.md). A separate daily 09:00 native administrator-JWT lifecycle job was
 operator-authorized and acceptance-tested on 2026-10-29; the canonical
 operator runbook is [OCI administrator JWT lifecycle](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-admin-jwt-renewal.md).
 Check live native job registration/runs before treating any schedule or

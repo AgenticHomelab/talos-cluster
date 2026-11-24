@@ -22,7 +22,8 @@ and blanket merge privileges are excluded. Read
 
 | Owner | Persistent configuration |
 | --- | --- |
-| Flux | Kubernetes resources in `kubernetes/` and Secret delivery from the private source |
+| Flux | Kubernetes desired state, including app-local ExternalSecret declarations and private noncredential ConfigMap reconciliation |
+| ESO and OCI Vault | Synchronization of stable runtime Secret copies from canonical Vault values |
 | Omni | Talos lifecycle, machine identities, applied cluster template and encrypted etcd snapshots |
 | OCI OpenTofu (`AgenticHomelab/oci-control-server`) | OCI infrastructure, policies and Vault/IAM metadata |
 | TrueNAS OpenTofu (`AgenticHomelab/truenas-infra`) | ACME, selected stable storage resources, service identities and native policies |
@@ -57,8 +58,8 @@ and scoped runbook before proposing changes.
 The retired bespoke Renovate runner/merger, dashboard guard and old
 lifecycle jobs remain disabled; the minimal GitHub Actions merge workflow is
 independent of those retired components. Native overnight Hermes health checks
-record locally; one Finnish Matrix summary is sent at 07:00
-Europe/Helsinki. See [native Renovate policy](../renovate-review-policy.md)
+record locally. The 07:00 Europe/Helsinki report records daily evidence and
+sends a Finnish Matrix notification only for material exceptions. See [Renovate policy](../renovate-review-policy.md)
 and [OCI nightly maintenance](https://github.com/AgenticHomelab/homelab-secrets/blob/main/operations/hermes/runbooks/hermes-nightly-maintenance.md).
 
 ## Safety and recovery boundaries
