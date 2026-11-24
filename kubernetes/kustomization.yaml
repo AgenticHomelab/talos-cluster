@@ -19,6 +19,7 @@ resources:
   - infrastructure/cloudflare-ddns
   - infrastructure/cloudnative-pg
   - infrastructure/external-dns
+  - infrastructure/external-secrets
   - infrastructure/external-services
   - infrastructure/flux-operator
   - infrastructure/flux-web-ui
