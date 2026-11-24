@@ -15,4 +15,13 @@ if printf '%s\n' "$render" | yq -e 'select(.kind == "Namespace")' >/dev/null 2>&
 fi
 # The standalone web release must not become a second operator.
 yq -e '.spec.values.web.serverOnly == true and .spec.values.installCRDs == false and .spec.releaseName == "flux-web"' kubernetes/infrastructure/flux-web-ui/app/helmrelease.yaml >/dev/null
-echo "PASS: operator adoption preserves control-plane identity and namespace ownership."
+# Active Flux decryption is retired; historical age identities are not bootstrap inputs.
+instance=kubernetes/clusters/talos-home/flux-system/fluxinstance.yaml
+yq -e '(.spec | has("kustomize") | not)' "$instance" >/dev/null
+while IFS= read -r file; do
+  yq -e 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/v1" and .kind == "Kustomization") | .spec | has("decryption")' "$file" 2>/dev/null | grep -qx true && {
+    echo "Unexpected active Flux decryption: $file" >&2
+    exit 1
+  }
+done < <(find kubernetes -type f -name '*.yaml' | sort)
+echo "PASS: operator adoption preserves control-plane identity, namespace ownership and ESO-only runtime delivery."

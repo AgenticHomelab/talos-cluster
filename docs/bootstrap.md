@@ -27,39 +27,34 @@ Expected: three Ready control-plane nodes. Do not use `--break-glass` for normal
 
 ## 4. Bootstrap Flux prerequisites
 
-Create the `flux-system` namespace and provision the two bootstrap Secrets outside Git:
+Recover the two independent bootstrap Secrets outside Git, using the isolated
+operator-run [OCI bootstrap playbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-secrets-bootstrap.yml)
+and its protected inputs. See the [OCI ESO migration and recovery runbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/eso-migration-runbook.md).
+The playbook uses independent operator OCI authentication, not ESO or Flux.
 
-- `flux-system/sops-age` from the authorized age recovery identity.
-- `flux-system/homelab-secrets-git` with the independent read-only SSH deploy key for `AgenticHomelab/homelab-secrets` and verified `known_hosts` entries.
+- `flux-system/homelab-secrets-git`: existing read-only SSH deploy credential and verified host keys for the private repository.
+- `external-secrets/oci-vault-auth`: dedicated OCI API signing private key and fingerprint.
 
-The production `flux-system` source reads `AgenticHomelab/talos-cluster`
-over anonymous HTTPS. `AgenticHomelab/homelab-secrets` is the independent
-private source and keeps its own read-only SSH deploy identity. Neither
-source requires a new age identity.
+The public `flux-system` source reads this repository over anonymous HTTPS.
+The private GitRepository supplies noncredential ConfigMap inputs, including
+OCI provider metadata. Historical age identities are kept independently for
+historical Git recovery only; do not install `sops-age` on a new cluster.
+Keep private keys, generated credentials and protected inputs out of Git/logs.
+Use the accepted public and private source revisions for recovery; Git revert
+cannot undo resource pruning.
 
-For source recovery, use the last accepted GitOps revision in this public
-repository and the matching private source revision from reconciliation
-evidence. Verify that the exact commits are independently reachable and that
-the two off-Git bootstrap identities remain available. Reconstruct the
-public HTTPS and independent private SSH sources with their existing Flux
-resource identities. A source, revision, credential or prune change requires
-a separately reviewed recovery plan. A Git revert cannot undo pruning.
-
-The former `antief/talos-homelab` SSH source is historical. The recovery
-procedure uses the two current sources above. Preserve any historical deploy
-credential until its own authorized credential review.
-Keep all private identities out of Git and logs. Register only the corresponding
-public SSH key as a read-only deploy key on the private repository.
-
-Before any application Secret ownership transfer, verify the new private source and configuration:
+After Flux and ESO are installed, check:
 
 ```bash
 flux -n flux-system get sources git homelab-secrets
 flux -n flux-system get kustomizations homelab-private-config
 kubectl -n flux-system get configmap homelab-private-vars -o name
+kubectl get clustersecretstore oci-vault
+kubectl get externalsecrets -A
 ```
 
-Both Flux resources must be Ready and the ConfigMap must exist at the expected private Git revision. The private source is deliberately independent of `repositories` and `apps`, so missing credentials do not block current application reconciliation. Do not move Secret manifests or change existing prune ownership until separate transfer checks pass.
+The private source and ConfigMap, ESO store and app-local ExternalSecrets
+must converge before accepting recovery. Verify actual application functions.
 
 ## 5. Install Flux Operator and hand ownership to Git
 

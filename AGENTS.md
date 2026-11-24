@@ -41,10 +41,9 @@ Talos machine configuration, node-specific patches, and its validation tools liv
 The physical TrueNAS server's selected stable NAS infrastructure and
 TrueNAS-side service identities belong to `AgenticHomelab/truenas-infra` OpenTofu.
 The official TrueNAS CSI driver owns the PVC-specific child datasets and NFS
-exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and ExternalSecret delivery remain Flux-owned here. OCI Vault is the intended canonical
-source for stable project-managed TrueNAS API-key values; a currently deployed
-SOPS Secret is a consumer copy, not proof of completed Vault adoption. Do not
-change live credentials or claim a migration from documentation alone.
+exports it creates. Never import these objects into TrueNAS OpenTofu. The CSI driver, StorageClasses, PVCs and ExternalSecret delivery remain Flux-owned here. OCI Vault is canonical for the stable project-managed TrueNAS CSI API key.
+ESO delivers its Kubernetes consumer copy; do not change live credentials
+or infer credential rotation from a Secret synchronization.
 
 Operational commands in `docs/` and `scripts/` are runbooks and utilities. Their presence does not authorize executing them.
 
@@ -116,7 +115,7 @@ names, keys, types and consumer metadata. Use periodic synchronization with
 cleanup when retiring a Secret in a surviving namespace.
 
 - Never commit plaintext credentials or decrypted values.
-- Do not edit or decrypt retained historical SOPS ciphertext without explicit authorization.
+- Historical SOPS ciphertext is retained in private Git history. Do not decrypt it without explicit authorization; the age identities are historical recovery material, not cluster bootstrap credentials.
 - Keep independent bootstrap credentials and recovery identities outside Git.
 - Application-owned mutable Secrets stay application-owned.
 
@@ -258,7 +257,7 @@ Before editing:
 
 1. Read `README.md`, `CONTEXT.md`, relevant ADRs, and the task-specific runbook. Follow [`docs/agents/operating-model.md`](docs/agents/operating-model.md) for agent responsibilities and authorization stages.
 2. Inspect the complete app or platform directory being changed.
-3. Trace its Kustomize resources, Flux path, sources, SOPS configuration, and `dependsOn` relationships.
+3. Trace its Kustomize resources, Flux path, sources, ExternalSecret configuration, and `dependsOn` relationships.
 4. Check the working tree and preserve unrelated changes.
 
 While editing:
