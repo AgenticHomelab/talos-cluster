@@ -15,11 +15,11 @@ Helm, kubectl (local Kustomize only), Flux CLI, plus envsubst and standard Linux
 binaries and checks their SHA-256 sums. No Python framework or packages are
 required. Use a clean checkout and an empty HOME without kubeconfigs or keys.
 
-Download the four exact chart versions declared by Git first:
+Download the five exact chart versions declared by Git first:
 
 ```sh
 chart_dir=$(mktemp -d)
-for entry in "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
+for entry in "infrastructure external-secrets" "infrastructure traefik" "infrastructure truenas-csi" "observability alloy" "observability kube-state-metrics"; do
   read -r unit_category unit <<<"$entry"
   version=$(yq -r '.spec.chart.spec.version' "kubernetes/$unit_category/$unit/app/helmrelease.yaml")
   repository=$(yq -r '.spec.url' "kubernetes/$unit_category/$unit/app/helmrepository.yaml")
