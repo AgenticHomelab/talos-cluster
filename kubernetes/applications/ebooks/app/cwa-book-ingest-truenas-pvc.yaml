@@ -8,7 +8,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: truenas-csi-production-retain
+  storageClassName: truenas-csi-retain
   volumeMode: Filesystem
   resources:
     requests:
