@@ -18,7 +18,7 @@ post-renderer strategy changes. Existing controller and CRD identities were
 preserved; optional upstream controller components were not enabled.
 The operator performed supported CRD migration as part of the approved
 reconciliation. The recorded post-upgrade observations showed the expected
-controller images, Git reconciliation and ESO synchronization, ready dependent releases and
+controller images, Git/SOPS reconciliation, ready dependent releases and
 no ownership transfer or availability regression.
 
 See the [Flux 2.9.6 release](https://github.com/fluxcd/flux2/releases/tag/v2.9.6),

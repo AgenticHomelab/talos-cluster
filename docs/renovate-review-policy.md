@@ -70,8 +70,9 @@ upgrade limit is one per node. Hermes must observe real volume and replica
 outcomes, use supported version-matched procedures and avoid unsafe downgrades.
 See [Longhorn upgrade](longhorn-upgrade.md).
 
-Hermes monitors the cluster overnight and sends one Finnish Matrix report at
-07:00. Hermes does **not** perform routine Renovate merges. Its runtime and
+Hermes monitors the cluster overnight and records daily evidence at 07:00.
+Finnish Matrix notifications are reserved for material exceptions. Hermes does
+**not** perform routine Renovate merges. Its runtime and
 native jobs use the [Hermes operations sources](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/hermes-operations-source.md).
 The retired custom runner,
 merger and lifecycle tools remain disabled. The GitHub Actions workflow does

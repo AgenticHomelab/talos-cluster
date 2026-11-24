@@ -128,7 +128,7 @@ files and `.immich` markers. Do not create a parallel snapshot schedule.
 **Failure domains:** CNPG archives, media snapshots and Longhorn's NFS
 backup target all depend on TrueNAS and LAN. Four weeks of media retention
 are shorter than the database's 30-day policy. Neither a Longhorn replica
-nor an OCI etcd snapshot includes a matching Immich media recovery point.
+nor an Omni etcd snapshot includes a matching Immich media recovery point.
 Off-NAS copies, their independent keys and an isolated paired restore are
 **not verified**.
 
