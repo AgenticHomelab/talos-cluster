@@ -33,9 +33,19 @@ a disposable pilot tree; never use a production claim as an ad hoc test.
 
 | StorageClass | Reclaim | Dataset path |
 | --- | --- | --- |
+| `truenas-csi-retain` | `Retain` | `k8s/csi` |
+| `truenas-csi-delete` | `Delete` | `k8s/csi` |
 | `truenas-csi-pilot-delete` | `Delete` | `k8s/csi-pilot/delete` |
 | `truenas-csi-pilot-retain` | `Retain` | `k8s/csi-pilot/retain` |
 | `truenas-csi-production-retain` | `Retain` | `k8s/csi` |
+
+The two new non-default classes use the same existing production parent and
+NFS parameters. Use Retain for persistent application data and Delete for
+volumes intended to be removed with their claims. Review native snapshot and
+replication coverage before accepting the Delete lifecycle; reclaim policy
+does not change those policies. No new NAS parent is required. Keep the
+legacy classes until their consumers are retired or rebound. Existing PVCs
+remain unchanged until an isolated retained-volume rebind has passed.
 
 ## Acceptance and recovery boundaries
 
