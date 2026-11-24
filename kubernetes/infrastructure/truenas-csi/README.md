@@ -33,9 +33,20 @@ a disposable pilot tree; never use a production claim as an ad hoc test.
 
 | StorageClass | Reclaim | Dataset path |
 | --- | --- | --- |
+| `truenas-csi-retain` | `Retain` | `k8s/csi` |
+| `truenas-csi-delete` | `Delete` | `k8s/csi-delete` |
 | `truenas-csi-pilot-delete` | `Delete` | `k8s/csi-pilot/delete` |
 | `truenas-csi-pilot-retain` | `Retain` | `k8s/csi-pilot/retain` |
 | `truenas-csi-production-retain` | `Retain` | `k8s/csi` |
+
+The two new non-default classes use the existing production NFS settings.
+Use Retain for persistent application data and Delete only for disposable
+volumes. The Delete parent is a separate stable OpenTofu-owned dataset;
+verify that it exists, is unlocked and has suitable snapshot and replication
+coverage before merging this StorageClass addition. CSI owns only its children
+and exports. Retain the three legacy classes during the transition. Existing
+PVCs remain unchanged until the retained-volume rebind procedure has passed
+isolated acceptance. Do not provision replacement production volumes.
 
 ## Acceptance and recovery boundaries
 

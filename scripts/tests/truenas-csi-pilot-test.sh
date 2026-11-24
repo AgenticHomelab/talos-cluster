@@ -17,8 +17,8 @@ yq -e '
   .spec.values.volumeSnapshotClass.enabled == false
 ' "$release" >/dev/null
 
-# Compare the exact approved values. This preserves the two original pilot
-# contracts and accepts only the reviewed, non-default production Retain class.
+# Compare the exact transitional contracts, preserving all existing classes
+# until the retained volumes have been rebound and pilot resources retired.
 if ! yq -o=json '.spec.values.storageClasses' "$release" | jq -e '. == [
   {
     "name": "truenas-csi-pilot-delete",
@@ -62,9 +62,39 @@ if ! yq -o=json '.spec.values.storageClasses' "$release" | jq -e '. == [
       "nfs.rootSquash": "false",
       "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
     }
+  },
+  {
+    "name": "truenas-csi-retain",
+    "isDefault": false,
+    "reclaimPolicy": "Retain",
+    "allowVolumeExpansion": true,
+    "volumeBindingMode": "Immediate",
+    "mountOptions": ["hard", "nfsvers=4.1", "sec=sys"],
+    "parameters": {
+      "protocol": "nfs",
+      "datasetPath": "k8s/csi",
+      "compression": "LZ4",
+      "nfs.rootSquash": "false",
+      "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
+    }
+  },
+  {
+    "name": "truenas-csi-delete",
+    "isDefault": false,
+    "reclaimPolicy": "Delete",
+    "allowVolumeExpansion": true,
+    "volumeBindingMode": "Immediate",
+    "mountOptions": ["hard", "nfsvers=4.1", "sec=sys"],
+    "parameters": {
+      "protocol": "nfs",
+      "datasetPath": "k8s/csi-delete",
+      "compression": "LZ4",
+      "nfs.rootSquash": "false",
+      "nfs.hosts": "${TRUENAS_NFS_CLIENT_HOSTS}"
+    }
   }
 ]' >/dev/null; then
-  echo "Source CSI StorageClasses differ from the exact approved pilot and production contracts." >&2
+  echo "Source CSI StorageClasses differ from the exact approved transitional contracts." >&2
   exit 1
 fi
 
@@ -93,7 +123,93 @@ if rg -q 'existingCABundleConfigMap|caBundle:' "$release"; then
   exit 1
 fi
 
-expected=$'truenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
+expected=
+actual="$(yq -r '
+  select(.kind == "StorageClass") |
+  [.metadata.name, .reclaimPolicy,
+   (.metadata.annotations["storageclass.kubernetes.io/is-default-class"] // "false"),
+   .parameters.datasetPath, (.mountOptions | join(","))] | @tsv
+' "$rendered" | rg -v '^(---)?$' | sort)"
+if [[ "$actual" != "$expected" ]]; then
+  echo "Rendered StorageClasses do not match the approved pilot and production contracts." >&2
+  exit 1
+fi
+
+if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | rg -v '^(---)?$' | wc -l)" -ne 5 ]]; then
+  echo "Expected three legacy classes and two new classes." >&2
+  exit 1
+fi
+
+# Check the rendered provisioner, binding, expansion and NFS parameter contract.
+yq -o=json 'select(.kind == "StorageClass")' "$rendered" | jq -se '
+  length == 5 and all(.[];
+    .provisioner == "csi.truenas.io" and
+    .volumeBindingMode == "Immediate" and
+    .allowVolumeExpansion == true and
+    .parameters.protocol == "nfs" and
+    .parameters.compression == "LZ4" and
+    .parameters["nfs.hosts"] == "${TRUENAS_NFS_CLIENT_HOSTS}" and
+    (if (.metadata.name == "truenas-csi-delete" or
+         .metadata.name == "truenas-csi-retain" or
+         .metadata.name == "truenas-csi-production-retain")
+     then .parameters["nfs.rootSquash"] == "false"
+     else true end))
+' >/dev/null
+
+if rg -q '^kind: Secret
+  echo "The upstream Helm chart must not generate credentials." >&2
+  exit 1
+fi
+
+driver_names="$(yq -r 'select(.kind == "CSIDriver") | .metadata.name' "$rendered" | rg -v '^(---)?$')"
+if [[ "$driver_names" != "csi.truenas.io" ]]; then
+  echo "Unexpected CSI driver name(s): $driver_names" >&2
+  exit 1
+fi
+
+echo "PASS: TrueNAS CSI transitional classes preserve TLS, ESO, non-default reclaim policies and NFS boundaries."
+truenas-csi-delete\tDelete\tfalse\tk8s/csi-delete\thard,nfsvers=4.1,sec=sys\ntruenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
+actual="$(yq -r '
+  select(.kind == "StorageClass") |
+  [.metadata.name, .reclaimPolicy,
+   (.metadata.annotations["storageclass.kubernetes.io/is-default-class"] // "false"),
+   .parameters.datasetPath, (.mountOptions | join(","))] | @tsv
+' "$rendered" | rg -v '^(---)?$' | sort)"
+if [[ "$actual" != "$expected" ]]; then
+  echo "Rendered StorageClasses do not match the approved pilot and production contracts." >&2
+  exit 1
+fi
+
+if [[ "$(yq -r 'select(.kind == "StorageClass") | .metadata.name' "$rendered" | rg -v '^(---)?$' | wc -l)" -ne 3 ]]; then
+  echo "Expected two pilot classes and one production class." >&2
+  exit 1
+fi
+
+if rg -q '^kind: Secret$' "$rendered"; then
+  echo "The upstream Helm chart must not generate credentials." >&2
+  exit 1
+fi
+
+driver_names="$(yq -r 'select(.kind == "CSIDriver") | .metadata.name' "$rendered" | rg -v '^(---)?$')"
+if [[ "$driver_names" != "csi.truenas.io" ]]; then
+  echo "Unexpected CSI driver name(s): $driver_names" >&2
+  exit 1
+fi
+
+echo "PASS: TrueNAS CSI pilot and production classes preserve TLS, ESO, non-default Retain and NFS boundaries."
+ "$rendered"; then
+  echo "The upstream Helm chart must not generate credentials." >&2
+  exit 1
+fi
+
+driver_names="$(yq -r 'select(.kind == "CSIDriver") | .metadata.name' "$rendered" | rg -v '^(---)?$')"
+if [[ "$driver_names" != "csi.truenas.io" ]]; then
+  echo "Unexpected CSI driver name(s): $driver_names" >&2
+  exit 1
+fi
+
+echo "PASS: TrueNAS CSI transitional classes preserve TLS, ESO, non-default reclaim policies and NFS boundaries."
+truenas-csi-delete\tDelete\tfalse\tk8s/csi-delete\thard,nfsvers=4.1,sec=sys\ntruenas-csi-pilot-delete\tDelete\tfalse\tk8s/csi-pilot/delete\thard,nfsvers=4.1\ntruenas-csi-pilot-retain\tRetain\tfalse\tk8s/csi-pilot/retain\thard,nfsvers=4.1\ntruenas-csi-production-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys\ntruenas-csi-retain\tRetain\tfalse\tk8s/csi\thard,nfsvers=4.1,sec=sys'
 actual="$(yq -r '
   select(.kind == "StorageClass") |
   [.metadata.name, .reclaimPolicy,
