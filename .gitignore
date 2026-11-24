@@ -5,7 +5,7 @@ talos/cluster-template.rendered.yaml
 
 generated/
 
-# vscode-sops decrypted temp files
+# Historical credential-recovery scratch files (never commit)
 **/.decrypted~*
 
 # Talos etcd snapshots

@@ -44,7 +44,6 @@
     ]
   },
   "ignorePaths": [
-    "**/*.sops.yaml",
     "kubernetes/infrastructure/snapshot-controller/config/upstream/**"
   ],
   "packageRules": [

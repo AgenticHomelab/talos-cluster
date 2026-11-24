@@ -30,7 +30,7 @@ The pre-upgrade chart comparison found no removed/added operator resource
 identities or RBAC rule changes. The distribution review examined removed
 beta APIs, post-render behavior, stored CRD versions and GCR Receiver changes.
 Post-reconciliation checks confirmed Flux controllers, FluxInstance, the
-Git/SOPS source and dependent Kustomizations/HelmReleases healthy.
+Git sources, ESO store and ExternalSecrets and dependent Kustomizations/HelmReleases healthy.
 
 The installed 2.9 distribution supports Kubernetes 1.34–1.36:
 [Flux 2.9 release](https://fluxcd.io/blog/2026/06/flux-v2.9.0/).
@@ -42,7 +42,7 @@ an approved new Flux version are actually available.
 Prepare separate operator, Flux controller and (if relevant) web UI changes.
 Before approval, compare current and target chart identities, CRDs and
 `status.storedVersions`, RBAC, `FluxInstance` API compatibility, workload
-readiness and source/SOPS behavior. Check the official release interval, run
+readiness and Git source and ESO behavior. Check the official release interval, run
 exact-head validation and review integration with current `main`. Use one
 approved rollout at a time.
 

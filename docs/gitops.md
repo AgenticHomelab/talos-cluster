@@ -86,8 +86,7 @@ ConfigMap's `ESO_OCI_VAULT_OCID`, `ESO_OCI_REGION`,
 `ESO_OCI_USER_OCID` and `ESO_OCI_TENANCY_OCID`, and the separately
 bootstrapped `external-secrets/oci-vault-auth` Secret. Its API signing
 key and fingerprint never enter Git. Restore that Secret independently
-using the OCI control-server bootstrap runbook. Validate the Store's Ready condition and a bounded secret synchronization
-when recovering or changing its provider configuration.
+using the [OCI control-server bootstrap runbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/talos-secrets-bootstrap.md). ESO signs OCI HTTPS requests with its dedicated key and reads only individually allowed runtime bundles. No control-host relay or write access is required. Validate the Store's Ready condition and a bounded secret synchronization when recovering or changing its provider configuration.
 
 For stable runtime credentials, put the ExternalSecret beside the workload in its
 existing app or config path, and depend on `external-secrets-config`.
@@ -102,6 +101,43 @@ Bootstrap API signing and Git deploy credentials are kept outside Git and
 recovered independently of ESO. Keep historical age identities recoverable.
 Never include credential values in PRs or use direct Secret patches as durable
 configuration.
+
+### Add or update a stable runtime credential
+
+1. Confirm that the credential is stable and project-managed, not native
+   application state, a controller-generated identity, or a bootstrap key.
+2. The operator creates the approved JSON-map secret or updates its version in
+   the existing OCI Vault, using the actual consumer key names. Coordinate
+   related service-side changes and preserve required prior versions for recovery.
+3. For a new bundle, the operator adds its exact OCID to the protected
+   OpenTofu runtime allowlist under the [OCI IAM contract](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/talos-eso-iam.md).
+   IAM changes require separate plan/apply approval. Never broaden access to
+   a whole compartment or give ESO access to bootstrap credentials.
+4. Declare an app-local ExternalSecret with the exact Vault secret **name**
+   in `dataFrom.extract.key`, the established target name/type/metadata,
+   `refreshInterval: 1h`, `creationPolicy: Orphan`, `deletionPolicy: Retain`,
+   and the shared store `oci-vault`. Register it in the local Kustomize root.
+   Use an existing declaration as the structural example.
+5. Review the PR and exact-head CI; after merge, check the store and target
+   synchronization and actual application consumption. Verify data key names,
+   type and any expected equality without dumping Secret values. ESO updates
+   Kubernetes Secret data, not the upstream service account or database password.
+   Environment-variable consumers may need a separately authorized rollout;
+   mounted Secrets and native reload/watch consumers have different semantics.
+
+Read-only diagnosis:
+
+```bash
+kubectl get clustersecretstore oci-vault
+kubectl get externalsecrets -A
+flux get kustomizations -A --status-selector ready=false
+```
+
+On provider failure, the configured Orphan/Retain policy preserves existing
+consumer objects; a missing Secret cannot be reconstructed until Vault access
+returns. Investigate Store/ExternalSecret conditions, access and refresh age
+before modifying anything. Do not delete existing Secrets to force a retry.
+This retention is desired behavior, not a completed outage exercise.
 
 Longhorn block storage, TrueNAS dynamically provisioned
 NFS and static retained NAS PVs have distinct owners and
@@ -124,8 +160,8 @@ suspend/resume, deletion and emergency patches require an
 approved operational scope. Persist any authorized temporary
 repair in Git.
 
-**Renovate exception:** native Renovate merges eligible
-patch/minor/major dependency PRs in the 00:00–03:59
+**Renovate exception:** the dedicated GitHub Actions workflow merges eligible
+Renovate patch/minor/major dependency PRs in the 00:00–03:59
 Europe/Helsinki night window, Longhorn Helm PRs in
 00:00–01:59. Talos and Kubernetes version changes are
 excluded. Renovate-authored PRs now run the same offline
@@ -149,7 +185,7 @@ git diff --check
 
 The complete gate checks registry, Service Audience, Matrix
 bridge contract, shell tests and Kubernetes desired state,
-YAML/Kustomize renders, encrypted Secret envelopes and
+YAML/Kustomize renders, ExternalSecret delivery contracts, absence of active encrypted or plaintext Secret manifests and
 generated-file/whitespace safety. It needs **exact upstream
 chart archives** for offline Helm rendering. All source-change
 PRs run its `Validate desired state / desired-state`

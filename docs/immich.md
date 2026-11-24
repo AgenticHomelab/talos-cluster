@@ -9,7 +9,7 @@ require separate checks.
 
 | Owner | Resources |
 | --- | --- |
-| `kubernetes/applications/immich/ks.yaml` and `app/` | Namespace workload dependencies, 3-instance CNPG `immich-postgres`, SOPS Secrets, ObjectStore, ScheduledBackup, TrueNAS CSI media PVC and NetworkPolicies |
+| `kubernetes/applications/immich/ks.yaml` and `app/` | Namespace workload dependencies, 3-instance CNPG `immich-postgres`, app-local ExternalSecrets, ObjectStore, ScheduledBackup, TrueNAS CSI media PVC and NetworkPolicies |
 | `config-ks.yaml` and `config/` | OCI chart source, HelmRelease `immich`, ConfigMap values for server, ML and Valkey |
 | TrueNAS operator | `tank/k8s/static/immich-media` dataset, NFS export/ACLs, native snapshots, Garage and recovery copies |
 | Flux/Omni | Kubernetes desired state / separately managed Talos machine lifecycle |
@@ -56,17 +56,17 @@ alone is not authorization.
 
 ## Credentials and independent custody
 
-SOPS-encrypted manifests under `kubernetes/applications/immich/app/` are:
+The app-local `externalsecret.yaml` synchronizes these OCI Vault-backed
+Kubernetes Secrets through the shared store:
 
-| Secret | Encrypted file | Purpose |
-| --- | --- | --- |
-| `immich-postgres-user` | `postgres-user.sops.yaml` | Non-superuser database account |
-| `immich-postgres-s3` | `postgres-backup-secret.sops.yaml` | Garage `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY`, `AWS_DEFAULT_REGION` |
-| `immich-postgres-s3-ca` | `postgres-backup-ca.sops.yaml` | Trusted Garage HTTPS CA |
+| Secret | Purpose |
+| --- | --- |
+| `immich-postgres-user` | Non-superuser database account (`kubernetes.io/basic-auth`) |
+| `immich-postgres-s3` | Garage `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY`, `AWS_DEFAULT_REGION` |
+| `immich-postgres-s3-ca` | Trusted Garage HTTPS CA, shared with other database consumers |
 
-Flux decrypts with `flux-system/sops-age`; **private age identities are not
-in Git**. Retain independently recoverable age keys, Git access, Garage
-bucket/key and CA, database credentials valid for the chosen recovery
+Preserve independently recoverable OCI access and pinned bootstrap credentials,
+Git access, Garage bucket/key and CA, database credentials valid for the chosen recovery
 point, Omni/etcd recovery dependencies and dataset/snapshot access outside
 the cluster/TrueNAS/OCI single failure domain. Do not print or reissue
 credentials while investigating a deployment. The Garage bucket is

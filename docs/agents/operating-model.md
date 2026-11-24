@@ -1,8 +1,7 @@
 # Agent operating model
 
 Flux uses this repository for Kubernetes desired state. The permanently private
-`AgenticHomelab/homelab-secrets` repository supplies private configuration, SOPS
-ciphertext and the Talos/Omni template and patches. Three physical Talos nodes
+`AgenticHomelab/homelab-secrets` repository supplies private noncredential configuration and the Talos/Omni template and patches. OCI Vault and ESO deliver stable runtime credentials. Three physical Talos nodes
 use local Longhorn NVMe. TrueNAS is a separate NAS and backup failure domain.
 TrueNAS CSI owns the PVC datasets and exports it creates.
 
@@ -41,7 +40,7 @@ and scoped runbook before proposing changes.
    Distinguish desired state, dated runtime, fresh measurements and
    unknown. Never treat a green controller as application acceptance.
 2. Inspect affected app directories, Kustomize ownership,
-   dependencies, PVC retention, SOPS configuration and external
+   dependencies, PVC retention, ExternalSecret delivery and external
    failure domains. Preserve unrelated changes and private keys.
 3. Use focused branches and Conventional Commits. Validate exact-head
    changes and current-main integration, run non-mutating checks,
@@ -66,8 +65,7 @@ and [OCI nightly maintenance](https://github.com/AgenticHomelab/homelab-secrets/
 
 - Generated Talos secrets, kubeconfigs, age private identities,
   Git/bootstrap keys, operator OCI access and protected recovery
-  material remain outside Git. A SOPS ciphertext in Git is not a
-  recoverable decryption key.
+  material remain outside Git. Historical encrypted files are not proof of recoverable keys.
 - Omni's hourly encrypted etcd snapshots, Omni application archives,
   Longhorn replicas/backups, CNPG WAL/base backups and NAS media
   snapshots protect **different** layers. A saved backup is not a

@@ -22,7 +22,7 @@ pending upgrade proposal. Sources:
 [Flux upgrade guidance](https://fluxcd.io/flux/installation/upgrade/).
 
 Future changes still require live CRD served/storage and resource inventories,
-removed-API checks, rendered ownership/pruning comparison, SOPS and dependency
+removed-API checks, rendered ownership/pruning comparison, ExternalSecret delivery and dependency
 validation, exact-head CI and current-base integration evidence. After an approved
 merge, verify normal reconciliation, controller health, source revisions and all
 child Kustomizations/HelmReleases. A Git revert is not a proven CRD downgrade.

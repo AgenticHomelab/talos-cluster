@@ -29,8 +29,12 @@ Expected: three Ready control-plane nodes. Do not use `--break-glass` for normal
 
 Recover the two independent bootstrap Secrets outside Git, using the isolated
 operator-run [OCI bootstrap playbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/ansible/talos-secrets-bootstrap.yml)
-and its protected inputs. See the [OCI ESO migration and recovery runbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/eso-migration-runbook.md).
+and its protected inputs. See the [OCI bootstrap recovery runbook](https://github.com/AgenticHomelab/oci-control-server/blob/main/docs/talos-secrets-bootstrap.md).
 The playbook uses independent operator OCI authentication, not ESO or Flux.
+For a new cluster, create `flux-system` and `external-secrets` namespaces if
+absent before invoking it; existing namespaces must not be recreated. Flux
+subsequently owns the ESO namespace through its declared reconciliation unit.
+Use the protected pinned bundle selectors retained independently of the cluster.
 
 - `flux-system/homelab-secrets-git`: existing read-only SSH deploy credential and verified host keys for the private repository.
 - `external-secrets/oci-vault-auth`: dedicated OCI API signing private key and fingerprint.
@@ -58,13 +62,17 @@ must converge before accepting recovery. Verify actual application functions.
 
 ## 5. Install Flux Operator and hand ownership to Git
 
-Install the Flux Operator Helm release in `flux-system` at the currently validated chart version. Then apply the repository entrypoint once to create the `FluxInstance` and cluster-level Flux Kustomizations:
+From the reviewed recovery revision, read the Flux Operator chart tag and digest
+from `kubernetes/infrastructure/flux-operator/app/ocirepository.yaml`. Verify
+the intended chart against the pinned digest before installation; do not use a
+floating chart tag. Then install the release in `flux-system` and apply the
+repository entrypoint once:
 
 ```bash
 helm upgrade --install flux-operator \
   oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
   --namespace flux-system \
-  --version 0.61.0
+  --version "$(yq -r '.spec.ref.tag' kubernetes/infrastructure/flux-operator/app/ocirepository.yaml)"
 
 kubectl apply -k kubernetes/clusters/talos-home
 ```
