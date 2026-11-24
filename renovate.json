@@ -123,6 +123,16 @@
       "allowedVersions": "!/^42\\.4\\.0$/"
     },
     {
+      "description": "Block confirmed unavailable Traefik chart 43.0.0 until upstream publishes it",
+      "matchDatasources": [
+        "helm"
+      ],
+      "matchPackageNames": [
+        "traefik"
+      ],
+      "allowedVersions": "!/^43\\.0\\.0$/"
+    },
+    {
       "description": "Block unavailable Tailscale operator chart 1.104.7 until upstream publishes it",
       "matchDatasources": [
         "helm"
