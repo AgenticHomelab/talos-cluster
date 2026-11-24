@@ -51,6 +51,20 @@ A mixed update containing excluded Talos/Kubernetes version changes is not
 eligible. Review actual changes and track Talos/Kubernetes version PRs in the
 [private owner repository](https://github.com/AgenticHomelab/homelab-secrets/blob/main/talos/README.md). Labels alone are not sufficient proof of eligibility.
 
+## OCI chart discovery and reviewed provenance
+
+Flux OCIRepository chart sources use an explicit version `tag` and immutable
+`digest`. Renovate's Flux manager discovers versions using the tag and updates
+the digest; Flux gives the digest precedence. Keep both fields aligned with
+the same verified upstream chart. An unchanged digest preserves the selected
+artifact. See the [Flux manager](https://docs.renovatebot.com/modules/manager/flux/)
+and [OCIRepository reference](https://fluxcd.io/flux/components/source/ocirepositories/).
+
+TrueNAS CSI chart changes require a reviewed update to the versioned
+`kubernetes/infrastructure/truenas-csi/upstream.sha256` alongside the version.
+The existing offline gate verifies the archive; it must not accept a freshly
+calculated checksum from an unreviewed artifact automatically.
+
 ## CI and runtime boundaries
 
 The existing `Validate desired state / desired-state` offline check runs for

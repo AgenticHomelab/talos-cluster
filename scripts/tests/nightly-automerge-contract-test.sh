@@ -34,6 +34,16 @@ assert any(
 print("PASS: Renovate creates PRs but cannot autonomously merge them")
 PY
 
+# OCI chart discovery must retain immutable artifact selection.
+while IFS= read -r path; do
+  yq -e 'select(.kind == "OCIRepository") | (.spec.ref.tag | test("^v?[0-9]+[.][0-9]+[.][0-9]+")) and (.spec.ref.digest | test("^sha256:[a-f0-9]{64}$")) and (.spec.ref | has("semver") | not)' "$repo_root/$path" >/dev/null
+done <<'EOF'
+kubernetes/flux/repositories/bjw-s-app-template.yaml
+kubernetes/applications/immich/config/ocirepository.yaml
+kubernetes/infrastructure/flux-web-ui/app/ocirepository.yaml
+kubernetes/infrastructure/flux-operator/app/ocirepository.yaml
+EOF
+
 # The only merge actor is the lightweight nightly Actions job.
 yq -o=json '.' "$repo_root/.github/workflows/renovate-nightly-merge.yaml" | jq -e '
   .on.schedule == [{"cron":"7,22,37,52 0-3 * * *","timezone":"Europe/Helsinki"}] and
