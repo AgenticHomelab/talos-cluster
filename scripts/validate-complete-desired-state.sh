@@ -158,7 +158,7 @@ for test_file in scripts/tests/*-test.sh; do
   echo "=== Shell test: $test_file ==="
   test_args=()
   case "$test_file" in
-    */truenas-csi-pilot-test.sh) test_args=("$render_directory/truenas-csi.yaml") ;;
+    */truenas-csi-storage-test.sh) test_args=("$render_directory/truenas-csi.yaml") ;;
     */public-ingress-boundary-test.sh) test_args=("$render_directory/traefik.yaml") ;;
     */talos-metrics-test.sh) test_args=("$render_directory/alloy.yaml" "$render_directory/kube-state-metrics.yaml") ;;
     */talos-logs-test.sh) test_args=("$render_directory/alloy.yaml") ;;

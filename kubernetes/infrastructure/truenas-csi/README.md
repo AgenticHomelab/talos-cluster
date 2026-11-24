@@ -29,23 +29,27 @@ deleting their original TrueNAS datasets or recovery material.
 
 The TrueNAS CSI API privilege is method-scoped, not dataset-scoped.
 In particular, `DATASET_DELETE` can recursively delete datasets outside
-a disposable pilot tree; never use a production claim as an ad hoc test.
+the intended CSI child; never use a production claim as an ad hoc test.
 
 | StorageClass | Reclaim | Dataset path |
 | --- | --- | --- |
 | `truenas-csi-retain` | `Retain` | `k8s/csi` |
 | `truenas-csi-delete` | `Delete` | `k8s/csi` |
-| `truenas-csi-pilot-delete` | `Delete` | `k8s/csi-pilot/delete` |
-| `truenas-csi-pilot-retain` | `Retain` | `k8s/csi-pilot/retain` |
-| `truenas-csi-production-retain` | `Retain` | `k8s/csi` |
 
-The two new non-default classes use the same existing production parent and
-NFS parameters. Use Retain for persistent application data and Delete for
-volumes intended to be removed with their claims. Review native snapshot and
-replication coverage before accepting the Delete lifecycle; reclaim policy
-does not change those policies. No new NAS parent is required. Keep the
-legacy classes until their consumers are retired or rebound. Existing PVCs
-remain unchanged until an isolated retained-volume rebind has passed.
+Both non-default classes use the same existing parent and NFS parameters.
+Use Retain for persistent application data and Delete for disposable volumes.
+Reclaim policy does not change native snapshot or replication policies.
+A Delete claim can remove its dataset and recovery snapshots; never use it
+for data that must survive claim deletion. Longhorn remains the default.
+
+All five production claims use the Retain class. The 2026-11-24 class rename
+preserved the original PVs and CSI volume handles without copying data.
+When a retained PVC must be recreated, stop its consumers and suspend its
+Flux reconciliation; prebind to the existing retained PV and use
+`kubectl apply --server-side --field-manager=flux-client-side-apply` for
+the recreated PVC, so Flux preserves the externally managed `volumeName`.
+Verify the original PV and handle, then resume reconciliation with matching
+Git desired state. Never force recreation of a bound claim.
 
 ## Acceptance and recovery boundaries
 
