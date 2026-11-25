@@ -36,7 +36,7 @@ spec:
             image:
               # renovate: datasource=docker depName=vectorim/element-web
               repository: vectorim/element-web
-              tag: v1.12.35
+              tag: v1.12.36
               pullPolicy: IfNotPresent
             ports:
               - name: http
