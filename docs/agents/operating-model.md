@@ -12,8 +12,9 @@ assets and runbooks, including fleet monitoring and native renewal.
 ## Authorization and source of truth
 
 Hermes is a trusted administrator **within assigned** `talos-home`
-and `control-01` incidents, with native Kubernetes, Omni Operator
-and host sudo privileges. The original read-only inspection identity
+and `control-01` incidents, with native Kubernetes, task-scoped Omni access
+and host sudo privileges. Effective signing-key privileges and the separate
+credential lifecycle are documented in the private administrator runbook. The original read-only inspection identity
 remains as a fallback. Assignment covers necessary diagnostics and
 supported incident repair, not arbitrary unrelated work. OKE,
 other OCI resources, destructive restoration, visibility changes
